@@ -1,0 +1,155 @@
+<div class="page-container">
+  <!-- Cabeçalho da Página -->
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Cadastros do Sistema</p>
+      <h1 class="page-title">Investimentos</h1>
+      <p class="page-subtitle">Cadastre os investimentos disponíveis para vincular aos seus lançamentos.</p>
+    </div>
+  </header>
+
+  <div class="content-grid">
+    <!-- Formulário de Cadastro / Edição -->
+    <section class="card cadastro-card">
+      <h2>{{ investimentoEditando ? 'Editar investimento' : 'Novo investimento' }}</h2>
+      <p class="text-muted">Informe as informações para identificá-lo ao registrar uma aplicação.</p>
+
+      <!-- Feedback / Mensagens -->
+      <div class="alert alert-danger" *ngIf="mensagemErro">
+        {{ mensagemErro }}
+      </div>
+      <div class="alert alert-success" *ngIf="mensagemSucesso">
+        {{ mensagemSucesso }}
+      </div>
+
+      <form class="cadastro-form" [formGroup]="form" (ngSubmit)="salvar()">
+        <!-- Campo: Nome do Investimento -->
+        <div class="form-group">
+          <label class="form-label" for="investimento-nome">Nome do investimento *</label>
+          <input 
+            id="investimento-nome" 
+            class="form-control" 
+            type="text" 
+            formControlName="nome"
+            placeholder="Ex.: Tesouro Selic 2029" 
+            maxlength="100" 
+          />
+          <small class="error-hint" *ngIf="form.get('nome')?.touched && form.get('nome')?.invalid">
+            Informe um nome com pelo menos 2 caracteres.
+          </small>
+        </div>
+
+        <!-- Campo: Banco / Conta -->
+        <div class="form-group">
+          <label class="form-label" for="conta-id">Banco / Conta associada *</label>
+          <select 
+            id="conta-id" 
+            class="form-control"
+            formControlName="contaId"
+          >
+            <option value="">Selecione uma conta</option>
+            <option *ngFor="let conta of contasVinculadas" [value]="conta.contaId">
+              {{ conta.bancoNome }} / {{ conta.contaNome }}
+            </option>
+          </select>
+          <small class="error-hint" *ngIf="form.get('contaId')?.touched && form.get('contaId')?.invalid">
+            Selecione o banco e a conta associados.
+          </small>
+          <small class="text-muted" *ngIf="carregandoContas">Carregando bancos e contas...</small>
+          <small class="text-muted" *ngIf="!carregandoContas && contasVinculadas.length === 0">
+            Nenhum banco/conta disponível para vínculo.
+          </small>
+        </div>
+
+        <!-- Ações do Formulário -->
+        <div class="form-actions">
+          <button 
+            class="btn btn-ghost" 
+            type="button" 
+            *ngIf="investimentoEditando" 
+            (click)="cancelarEdicao()"
+          >
+            Cancelar
+          </button>
+          
+          <button 
+            class="btn btn-primary" 
+            type="submit" 
+            [disabled]="salvando || form.invalid"
+          >
+            {{ salvando ? 'Salvando...' : (investimentoEditando ? 'Salvar alterações' : 'Cadastrar investimento') }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Tabela de Registros -->
+    <section class="card table-card">
+      <div class="table-header">
+        <div>
+          <h2>Investimentos cadastrados</h2>
+          <span class="text-muted">{{ investimentosAtivos.length }} registro(s)</span>
+        </div>
+        <button 
+          class="btn btn-ghost btn-sm" 
+          type="button" 
+          (click)="carregarInvestimentos()" 
+          [disabled]="carregando"
+        >
+          Atualizar
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Banco / Conta</th>
+              <th>ID</th>
+              <th class="text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let investimento of investimentosAtivos">
+              <td><strong>{{ investimento.nome }}</strong></td>
+              <td>
+                <ng-container *ngIf="getContaVinculada(investimento.contaId) as conta; else contaNaoEncontrada">
+                  {{ conta.bancoNome }} / {{ conta.contaNome }}
+                </ng-container>
+                <ng-template #contaNaoEncontrada><span class="text-muted">Não informado</span></ng-template>
+              </td>
+              <td class="text-muted">{{ investimento.id }}</td>
+              <td class="row-actions text-right">
+                <button 
+                  class="btn btn-ghost btn-sm" 
+                  type="button" 
+                  (click)="editar(investimento)"
+                >
+                  Editar
+                </button>
+                <button 
+                  class="btn btn-ghost btn-sm danger" 
+                  type="button" 
+                  (click)="excluir(investimento)"
+                >
+                  Excluir
+                </button>
+              </td>
+            </tr>
+
+            <!-- Loading State -->
+            <tr *ngIf="carregando">
+              <td colspan="4" class="empty-state">Carregando investimentos...</td>
+            </tr>
+
+            <!-- Empty State -->
+            <tr *ngIf="!carregando && investimentosAtivos.length === 0">
+              <td colspan="4" class="empty-state">Nenhum investimento cadastrado.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>

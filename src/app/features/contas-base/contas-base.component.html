@@ -1,0 +1,67 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Contas (Tipos)</h1>
+      <p class="page-subtitle">Gerencie os tipos de contas e investimentos que você possui</p>
+    </div>
+    <button class="btn btn-primary" (click)="abrirModalParaAdicionar()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Nova Conta
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Tipo</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let conta of contasBase">
+            <td>{{ conta.descricao }}</td>
+            <td>
+              <span class="badge-tipo badge-{{ conta.tipo }}">
+                {{ tiposConta[conta.tipo].icone }} {{ conta.tipo }}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-ghost btn-sm" (click)="abrirModalParaEditar(conta)">Editar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showModal" (click)="fecharModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ isEditando ? 'Editar Conta' : 'Nova Conta' }}</h3>
+      <button class="modal-close" (click)="fecharModal()">×</button>
+    </div>
+
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="salvarContaBase()">
+      <div class="form-group">
+        <label class="form-label">Descrição *</label>
+        <input class="form-control" type="text" formControlName="descricao" placeholder="Ex: Conta Corrente">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo de Conta *</label>
+        <select class="form-control" formControlName="tipo">
+          <option *ngFor="let t of tiposDisponiveis" [value]="t">{{ tiposConta[t].icone }} {{ tiposConta[t].label }}</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" (click)="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>

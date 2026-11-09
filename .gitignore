@@ -5,6 +5,11 @@
 /tmp
 /out-tsc
 /bazel-out
+<<<<<<< HEAD
+=======
+/angular
+
+>>>>>>> 1d887224bf98157575a37a4f0d18df1c0dd26c86
 
 # Node
 /node_modules
@@ -26,7 +31,10 @@ yarn-error.log
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+<<<<<<< HEAD
 !.vscode/mcp.json
+=======
+>>>>>>> 1d887224bf98157575a37a4f0d18df1c0dd26c86
 .history/*
 
 # Miscellaneous
@@ -37,7 +45,10 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
+<<<<<<< HEAD
 __screenshots__/
+=======
+>>>>>>> 1d887224bf98157575a37a4f0d18df1c0dd26c86
 
 # System files
 .DS_Store

@@ -1,0 +1,217 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Fechamento todo dia 8</p>
+      <h1 class="page-title">Cartão de crédito</h1>
+      <p class="page-subtitle">Acompanhe suas faturas e movimentações por cartão</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-ghost" type="button" (click)="abrirCadastroCartao()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="14" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        Novo cartão
+      </button>
+      <button class="btn btn-primary" type="button" (click)="abrirModalLancamento()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Lançar compra
+      </button>
+    </div>
+  </div>
+
+  <section class="cards-section" *ngIf="cartoes.length > 0">
+    <div class="content-heading"><div><h2>Seus cartões</h2><p>Limite e utilização por cartão cadastrado</p></div></div>
+    <div class="cards-grid">
+      <article class="credit-card" *ngFor="let cartao of cartoes; let indice = index" [class.teal]="indice % 2 === 1">
+        <div class="credit-card-top"><span class="card-chip"></span><span class="card-brand">{{ cartao.banco.nome | uppercase }}</span></div>
+        <p class="card-number">•••• •••• ••••</p>
+        <div class="credit-card-bottom">
+          <div><span class="card-caption">Cartão</span><strong>{{ cartao.nome }}</strong></div>
+          <div class="card-due"><span class="card-caption">Fecha / vence</span><strong>{{ cartao.diaFechamento || 8 }} / {{ cartao.diaVencimento || 15 }}</strong></div>
+        </div>
+        <button class="card-edit" type="button" (click)="editarCartao(cartao)">Editar cartão</button>
+      </article>
+    </div>
+  </section>
+
+    <div class="filter-bar card-filters">
+      <div class="filter-field">
+        <label for="data-inicial">Data inicial</label>
+        <input id="data-inicial" class="filter-select" type="date" [(ngModel)]="dataInicial" (change)="atualizarInformacoesDaTela()">
+      </div>
+      <div class="filter-field">
+        <label for="data-final">Data final</label>
+        <input id="data-final" class="filter-select" type="date" [(ngModel)]="dataFinal" (change)="atualizarInformacoesDaTela()">
+      </div>
+      <div class="filter-field filter-field-card">
+        <label for="cartao">Cartão (banco)</label>
+        <select id="cartao" class="filter-select" [(ngModel)]="filtroBanco" (change)="atualizarInformacoesDaTela()">
+          <option value="todos">Todos os cartões</option>
+          <option *ngFor="let cartaoCredito of cartoesCredito" [value]="cartaoCredito.id">{{ cartaoCredito.nome }}</option>
+        </select>
+      </div>
+      <span class="closing-note">Ciclo atual: {{ fechamentoAtual | date:'dd/MM/yyyy' }} a {{ proximoFechamento | date:'dd/MM/yyyy' }}</span>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <span class="summary-label">Limite total</span>
+        <strong>{{ limiteTotal | currencyBr }}</strong>
+        <span class="summary-detail">{{ cartoesFiltrados.length }} cartão(ões) selecionado(s)</span>
+      </div>
+      <div class="summary-card highlight">
+        <span class="summary-label">Fatura atual</span>
+        <strong>{{ faturaAtual | currencyBr }}</strong>
+        <span class="summary-detail">Fecha em {{ proximoFechamento | date:'dd/MM' }}</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Limite disponível</span>
+        <strong>{{ limiteDisponivel | currencyBr }}</strong>
+        <span class="summary-detail">{{ limiteTotal ? (pagamentoAnterior / limiteTotal * 100 | number:'1.0-0') : 0 }}% utilizado</span>
+      </div>
+    </div>
+
+    <div class="modal-overlay" *ngIf="showModal" (click)="fecharModal()">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>{{ isEditandoLancamento ? 'Editar movimentação do cartão' : 'Lançar compra no cartão' }}</h3>
+            <p class="modal-subtitle">A data da compra fica registrada na observação. As parcelas usam datas mensais para os filtros.</p>
+          </div>
+          <button class="modal-close" type="button" (click)="fecharModal()" aria-label="Fechar">×</button>
+        </div>
+
+        <form class="modal-form" [formGroup]="form" (ngSubmit)="salvarLancamentoCartao()">
+          <div class="form-group">
+            <label class="form-label" for="modal-cartao">Cartão (banco)</label>
+            <select id="modal-cartao" class="form-control" formControlName="cartaoCreditoId">
+              <option value="">Selecione o cartão</option>
+              <option *ngFor="let cartao of cartoesCredito" [value]="cartao.id">{{ cartao.nome }}</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="data-compra">Data da compra *</label>
+              <input id="data-compra" class="form-control" type="date" formControlName="data">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="valor-compra">Valor total (R$) *</label>
+              <input id="valor-compra" class="form-control" type="number" min="0.01" step="0.01" formControlName="valor" placeholder="0,00">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="categoria-compra">Categoria *</label>
+              <select id="categoria-compra" class="form-control" formControlName="tipoMovimentacaoId">
+                <option *ngFor="let tipo of tipoMovimentacoes" [value]="tipo.id">{{ tipo.nome }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="parcelas">Parcelado</label>
+              <input id="parcelas" class="form-control" type="number" min="1" max="60" step="1" formControlName="parcelas">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="observacao-compra">Observação</label>
+            <textarea id="observacao-compra" class="form-control" rows="3" formControlName="descricao" placeholder="Ex: compra para a casa"></textarea>
+          </div>
+
+          <p class="error-hint" *ngIf="erroLancamento">{{ erroLancamento }}</p>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" type="button" (click)="fecharModal()">Cancelar</button>
+            <button class="btn btn-primary" type="submit" [disabled]="form.invalid">{{ isEditandoLancamento ? 'Salvar alterações' : 'Salvar compra' }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <section class="payment-grid">
+      <article class="payment-card previous">
+        <div class="payment-icon">✓</div>
+        <div><span>Pagamento anterior</span><strong>{{ pagamentoAnterior | currencyBr }}</strong><small>Período encerrado</small></div>
+      </article>
+      <article class="payment-card current">
+        <div class="payment-icon">◷</div>
+        <div><span>Fatura atual</span><strong>{{ faturaAtual | currencyBr }}</strong><small>Vence após o fechamento de {{ proximoFechamento | date:'dd/MM' }}</small></div>
+      </article>
+      <article class="payment-card future">
+        <div class="payment-icon">→</div>
+        <div><span>Pagamentos futuros</span><strong>{{ pagamentoFuturo | currencyBr }}</strong><small>Após o próximo fechamento</small></div>
+      </article>
+    </section>
+
+    <div class="content-heading">
+      <div><h2>Movimentações dos cartões</h2><p>{{ movimentacoes.length }} lançamento(s) no período filtrado</p></div>
+    </div>
+    <p class="error-hint" *ngIf="erroLancamento">{{ erroLancamento }}</p>
+    <div class="card table-card">
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr><th>Data</th><th>Cartão / Banco</th><th>Descrição</th><th>Tipo de Movimentação</th><th style="text-align:right">Valor</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let movimento of movimentacoes">
+              <td class="text-secondary">{{ movimento.data | date:'dd/MM/yyyy' }}</td>
+              <td><strong>{{ movimento.cartaoCredito }}</strong></td>
+              <td>{{ movimento.descricao }}</td>
+              <td><span class="category-chip">{{ movimento.tipoMovimentacao }}</span></td>
+              <td class="movement-value" [class.credit]="movimento.tipo === 'credito'">{{ movimento.tipo === 'credito' ? '+' : '-' }}{{ movimento.valor | currencyBr }}</td>
+              <td><span class="status-pill" [class.payment]="movimento.tipo === 'credito'">{{ movimento.tipo === 'credito' ? 'Pagamento/estorno' : 'Compra' }}</span></td>
+              <td>
+                <div style="display:flex;justify-content:center;gap:0.35rem">
+                  <button class="btn btn-ghost btn-sm" type="button" (click)="editarLancamento(movimento)" title="Editar movimentação" aria-label="Editar movimentação">Editar</button>
+                  <button class="btn btn-ghost btn-sm" style="color:var(--danger)" type="button" (click)="excluirLancamento(movimento)" title="Excluir movimentação" aria-label="Excluir movimentação">Excluir</button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="movimentacoes.length === 0"><td colspan="7" class="empty-state">Nenhuma movimentação encontrada para os filtros selecionados.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showConfirmacaoExclusao" (click)="cancelarExclusao()">
+  <div class="modal-box delete-confirmation" role="dialog" aria-modal="true" aria-labelledby="titulo-exclusao-movimentacao" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="titulo-exclusao-movimentacao">Excluir movimentação?</h3>
+      <button class="modal-close" type="button" (click)="cancelarExclusao()" aria-label="Fechar">×</button>
+    </div>
+    <p class="delete-confirmation-text">Deseja realmente excluir <strong>{{ lancamentoParaExcluir?.descricao || lancamentoParaExcluir?.tipoMovimentacao }}</strong>?</p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" type="button" (click)="cancelarExclusao()">Cancelar</button>
+      <button class="btn btn-danger" type="button" (click)="confirmarExclusao()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showCadastroCartao" (click)="fecharCadastroCartao()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div><h3>{{ isEditandoCartao ? 'Editar cartão de crédito' : 'Novo cartão de crédito' }}</h3><p class="modal-subtitle">Cadastre o limite e o ciclo de fechamento para acompanhar suas faturas.</p></div>
+      <button class="modal-close" type="button" (click)="fecharCadastroCartao()" aria-label="Fechar">×</button>
+    </div>
+    <form class="modal-form" [formGroup]="cadastroCartaoForm" (ngSubmit)="salvarCartao()">
+      <div class="form-group">
+        <label class="form-label" for="novo-cartao-banco">Banco *</label>
+        <select id="novo-cartao-banco" class="form-control" formControlName="bancoId"><option value="">Selecione o banco</option><option *ngFor="let banco of bancos" [value]="banco.id">{{ banco.nome }}</option></select>
+      </div>
+      <div class="form-group"><label class="form-label" for="novo-cartao-nome">Nome do cartão *</label><input id="novo-cartao-nome" class="form-control" type="text" formControlName="descricao" placeholder="Ex: Nubank principal"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label" for="novo-cartao-limite">Limite (R$) *</label><input id="novo-cartao-limite" class="form-control" type="number" min="0.01" step="0.01" formControlName="limite" placeholder="0,00"></div>
+        <div class="form-group"><label class="form-label" for="novo-cartao-data">Data inicial *</label><input id="novo-cartao-data" class="form-control" type="date" formControlName="dataAbertura"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label" for="novo-cartao-final">Data final</label><input id="novo-cartao-final" class="form-control" type="date" formControlName="dataFechamento"><small class="field-hint">Depois desta data o cartão deixa de aparecer.</small></div>
+        <div class="form-group"><label class="form-label" for="novo-cartao-fechamento">Dia de fechamento *</label><input id="novo-cartao-fechamento" class="form-control" type="number" min="1" max="31" formControlName="diaFechamento"></div>
+      </div>
+      <div class="form-group"><label class="form-label" for="novo-cartao-vencimento">Dia de vencimento *</label><input id="novo-cartao-vencimento" class="form-control" type="number" min="1" max="31" formControlName="diaVencimento"></div>
+      <p class="error-hint" *ngIf="erroCadastroCartao">{{ erroCadastroCartao }}</p>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" (click)="fecharCadastroCartao()">Cancelar</button><button type="submit" class="btn btn-primary" [disabled]="cadastroCartaoForm.invalid">{{ isEditandoCartao ? 'Salvar alterações' : 'Salvar cartão' }}</button></div>
+    </form>
+  </div>
+</div>

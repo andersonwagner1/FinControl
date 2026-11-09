@@ -1,0 +1,308 @@
+<div class="page-container">
+  <div class="period-filter-bar">
+    <h2>Período de competência</h2>
+    <div class="period-filters">
+      <label>
+        <span>Competência inicial</span>
+        <input type="month" [(ngModel)]="competenciaInicial" [max]="competenciaFinal || null" (change)="atualizarPeriodoSankey()">
+      </label>
+      <label>
+        <span>Competência final</span>
+        <input type="month" [(ngModel)]="competenciaFinal" [min]="competenciaInicial || null" (change)="atualizarPeriodoSankey()">
+      </label>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-grid">
+    <div class="stat-card card">
+      <div class="stat-icon" style="background: rgba(99,102,241,0.15)">💰</div>
+      <div class="stat-label">Patrimônio Total</div>
+      <div class="stat-value">{{ dashboardCart.patrimonioTotal | currencyBr }}</div>
+      <div class="stat-change positive">↑ Bancário + Investimentos</div>
+    </div>
+    <div class="stat-card card">
+      <div class="stat-icon" style="background: rgba(79,142,247,0.15)">🏦</div>
+      <div class="stat-label">Saldo Bancário</div>
+      <div class="stat-value">{{ dashboardCart.saldoBancario | currencyBr }}</div>
+      <div class="stat-change positive">CC + Poupança</div>
+    </div>
+    <div class="stat-card card">
+      <div class="stat-icon" style="background: rgba(245,158,11,0.15)">📈</div>
+      <div class="stat-label">Investimentos</div>
+      <div class="stat-value">{{ dashboardCart.investimentos | currencyBr }}</div>
+      <div class="stat-change positive">FII · CDB · SELIC · IPCA</div>
+    </div>
+    <div class="stat-card card">
+      <div class="stat-icon" style="background: rgba(34,197,94,0.15)">✅</div>
+      <div class="stat-label">Créditos no Período</div>
+      <div class="stat-value text-success">{{ dashboardCart.creditosMes | currencyBr }}</div>
+      <div class="stat-change positive">{{ competenciaInicial }} a {{ competenciaFinal }}</div>
+    </div>
+    <div class="stat-card card">
+      <div class="stat-icon" style="background: rgba(244,63,94,0.15)">❌</div>
+      <div class="stat-label">Débitos no Período</div>
+      <div class="stat-value text-danger">{{ dashboardCart.debitosMes | currencyBr }}</div>
+      <div class="stat-change negative">{{ competenciaInicial }} a {{ competenciaFinal }}</div>
+    </div>
+    <div class="stat-card card" [class.positive-balance]="dashboardCart.saldoMes >= 0" [class.negative-balance]="dashboardCart.saldoMes < 0">
+      <div class="stat-icon" style="background: rgba(6,182,212,0.15)">⚖️</div>
+      <div class="stat-label">Saldo do Mês</div>
+      <div class="stat-value" [class.text-success]="dashboardCart.saldoMes >= 0" [class.text-danger]="dashboardCart.saldoMes < 0">
+        {{ dashboardCart.saldoMes | currencyBr }}
+      </div>
+      <div class="stat-change" [class.positive]="dashboardCart.saldoMes >= 0" [class.negative]="dashboardCart.saldoMes < 0">
+        {{ dashboardCart.saldoMes >= 0 ? 'Positivo ✓' : 'Negativo ✗' }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts + Banks Row -->
+  <div class="charts-row">
+    <!-- Donut Chart -->
+    <div class="card chart-card">
+      <div class="card-header">
+        <h3>Distribuição por Tipo</h3>
+        <span class="card-subtitle">Posição em {{ competenciaFinal }}</span>
+      </div>
+      <div class="chart-wrapper">
+        <canvas #donutChart></canvas>
+      </div>
+    </div>
+
+    <!-- Bar Chart -->
+    <div class="card chart-card chart-card--wide">
+      <div class="card-header">
+        <h3>Saldo por Banco</h3>
+        <span class="card-subtitle">Posição em {{ competenciaFinal }}</span>
+      </div>
+      <div class="chart-wrapper">
+        <canvas #barChart></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card expense-chart-card">
+    <div class="card-header">
+      <div>
+        <h3>Gastos por tipo de movimentação</h3>
+        <span class="card-subtitle">{{ competenciaInicial }} a {{ competenciaFinal }} · Total: {{ totalGastos | currencyBr }}</span>
+      </div>
+    </div>
+    <div class="expense-chart-content">
+      <div class="expense-chart-message" *ngIf="carregandoGastos">Carregando gastos...</div>
+      <div class="expense-chart-message" *ngIf="!carregandoGastos && erroGastos">Não foi possível carregar os gastos deste período.</div>
+      <div class="expense-chart-message" *ngIf="!carregandoGastos && !erroGastos && gastosPorTipo.length === 0">Nenhum gasto encontrado neste período.</div>
+      <div class="expense-chart-wrapper" [hidden]="carregandoGastos || erroGastos || gastosPorTipo.length === 0">
+        <canvas #gastosChart></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card chart-card patrimonio-chart-card">
+    <div class="card-header">
+      <div>
+        <h3>Crescimento mensal do patrimônio</h3>
+        <span class="card-subtitle">Últimos 12 meses, considerando os saldos das contas</span>
+      </div>
+      <span class="card-subtitle" *ngIf="carregandoPatrimonioMensal">Carregando...</span>
+      <span class="card-subtitle" *ngIf="erroPatrimonioMensal">Não foi possível carregar o histórico.</span>
+    </div>
+    <div class="chart-wrapper">
+      <canvas #patrimonioChart></canvas>
+    </div>
+  </div>
+
+  <div class="card chart-card fluxo-mensal-chart-card">
+    <div class="card-header">
+      <div>
+        <h3>Entradas, débitos e lucro mensal</h3>
+        <span class="card-subtitle">Lucro calculado como entradas menos débitos · últimos 12 meses</span>
+      </div>
+      <span class="card-subtitle" *ngIf="carregandoFluxoMensal">Carregando...</span>
+      <span class="card-subtitle" *ngIf="erroFluxoMensal">Não foi possível carregar o histórico.</span>
+    </div>
+    <div class="chart-wrapper">
+      <canvas #fluxoMensalChart></canvas>
+    </div>
+  </div>
+
+  <section class="card report-card">
+    <div class="card-header">
+      <div>
+        <h3>Relatorio</h3>
+        <span class="card-subtitle">Movimentações mensais de {{ anoRelatorio }}</span>
+      </div>
+      <span class="card-subtitle" *ngIf="carregandoRelatorio">Carregando...</span>
+      <span class="card-subtitle" *ngIf="erroRelatorio">Não foi possível carregar o relatório.</span>
+    </div>
+    <div class="report-table-wrap" *ngIf="!carregandoRelatorio && !erroRelatorio">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Mês</th>
+            <th>Saldo Anterior</th>
+            <th>Resgate</th>
+            <th>Renda</th>
+            <th>Credito</th>
+            <th>Rendimento</th>
+            <th>Total Credito</th>
+            <th>Rendimento Negativo</th>
+            <th>Cartao</th>
+            <th>Aplicação</th>
+            <th>Debito</th>
+            <th>mensal</th>
+            <th>Total Debito</th>
+            <th>Saldo final</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let linha of relatorioMensal">
+            <th scope="row">{{ linha.mes }}</th>
+            <td>{{ linha.saldoAnterior | currencyBr }}</td>
+            <td>{{ linha.resgate | currencyBr }}</td>
+            <td>{{ linha.renda | currencyBr }}</td>
+            <td>{{ linha.credito | currencyBr }}</td>
+            <td>{{ linha.rendimento | currencyBr }}</td>
+            <td class="report-total">{{ linha.totalCredito | currencyBr }}</td>
+            <td>{{ linha.rendimentoNegativo | currencyBr }}</td>
+            <td>{{ linha.cartao | currencyBr }}</td>
+            <td>{{ linha.aplicacao | currencyBr }}</td>
+            <td>{{ linha.debito | currencyBr }}</td>
+            <td>{{ linha.mensal | currencyBr }}</td>
+            <td class="report-total">{{ linha.totalDebito | currencyBr }}</td>
+            <td class="report-total">{{ linha.saldoFinal | currencyBr }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="card sankey-card sankey-card--echarts">
+    <div class="card-header">
+      <div>
+        <h3>Fluxo por categoria</h3>
+        <span class="card-subtitle">Entradas e resgates → conta corrente e cartão → débitos e aplicações</span>
+      </div>
+    </div>
+    <div #sankeyChart class="sankey-chart" aria-label="Gráfico Sankey de créditos por categoria para débitos por categoria"></div>
+  </div>
+
+  <div class="card sankey-card sankey-card--legacy">
+    <div class="card-header">
+      <div>
+        <h3>Fluxo financeiro</h3>
+        <span class="card-subtitle">Créditos, transferências e débitos de todos os lançamentos</span>
+      </div>
+      <span class="sankey-period">Visão geral</span>
+    </div>
+    <div class="sankey-legend">
+      <span><i class="legend-dot income"></i>Entradas</span>
+      <span><i class="legend-dot transfer"></i>Transferências</span>
+      <span><i class="legend-dot expense"></i>Saídas</span>
+    </div>
+    <div class="sankey-board" *ngIf="sankeyFluxos.length > 0; else sankeyEmpty">
+      <div class="sankey-column sankey-inputs">
+        <h4>Entradas</h4>
+        <div class="sankey-flow" *ngFor="let fluxo of sankeyEntradas" [style.border-left-width.px]="getSankeyLargura(fluxo.valor)">
+          <div><strong>{{ fluxo.origem }}</strong><small>para {{ fluxo.destino }}</small></div>
+          <b>{{ fluxo.valor | currencyBr }}</b>
+        </div>
+      </div>
+      <div class="sankey-column sankey-center">
+        <h4>Conta Corrente</h4>
+        <div class="sankey-node" *ngFor="let conta of contas">
+          <ng-container *ngIf="conta.tipo === 'CC'">
+            <span>{{ nomeConta(conta) }}</span>
+            <small>{{ getBancoNome(conta.id) }}</small>
+          </ng-container>
+        </div>
+        <div class="sankey-flow transfer-flow" *ngFor="let fluxo of sankeyTransferencias" [style.border-left-width.px]="getSankeyLargura(fluxo.valor)">
+          <div><strong>{{ fluxo.origem }}</strong><small>para {{ fluxo.destino }}</small></div>
+          <b>{{ fluxo.valor | currencyBr }}</b>
+        </div>
+      </div>
+      <div class="sankey-column sankey-outputs">
+        <h4>Saídas e destinos</h4>
+        <div class="sankey-flow expense-flow" *ngFor="let fluxo of sankeySaidas" [style.border-left-width.px]="getSankeyLargura(fluxo.valor)">
+          <div><strong>{{ fluxo.destino }}</strong><small>a partir de {{ fluxo.origem }}</small></div>
+          <b>{{ fluxo.valor | currencyBr }}</b>
+        </div>
+      </div>
+    </div>
+    <ng-template #sankeyEmpty>
+      <div class="sankey-empty">Ainda não existem lançamentos para montar o fluxo financeiro.</div>
+    </ng-template>
+  </div>
+
+  <!-- Banks Summary -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Resumo por Banco</h3>
+    </div>
+    <div class="banks-grid">
+      <div *ngFor="let resumo of resumosBanco" class="bank-card" [style.border-left-color]="resumo.banco.cor">
+        <div class="bank-logo" [style.background]="resumo.banco.cor + '25'" [style.color]="resumo.banco.cor">
+          {{ resumo.banco.logo }}
+        </div>
+        <div class="bank-info">
+          <div class="bank-name">{{ resumo.banco.nome }}</div>
+          <div class="bank-saldo">{{ resumo.saldoTotal | currencyBr }}</div>
+          <div class="bank-types">
+            <span *ngFor="let tipo of resumo.contatypes" class="badge-tipo badge-{{ tipo }}">
+              {{ getTipoContaInfo(tipo).icone }} {{ tipo }}
+            </span>
+          </div>
+        </div>
+        <div class="bank-count">
+          <span class="count-num">{{ resumo.contas }}</span>
+          <span class="count-label">contas</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Last Transactions -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Últimos Lançamentos</h3>
+      <a routerLink="/lancamentos" class="btn btn-ghost btn-sm">Ver todos →</a>
+    </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th>Conta</th>
+            <th>Banco</th>
+            <th>Categoria</th>
+            <th>Tipo</th>
+            <th style="text-align:right">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of ultimosLancamentos">
+            <td class="text-muted">{{ l.data | date:'dd/MM/yyyy' }}</td>
+            <td>{{ l.observacao }}</td>
+            <td class="text-secondary">{{ getContaNome(l.bancoContaId) }}</td>
+            <td class="text-secondary">{{ getBancoNome(l.bancoContaId) }}</td>
+            <td><span class="categoria-chip">{{ l.tipoMovimentacaoId }}</span></td>
+            <td>
+              <td style="text-align:right">
+              <span [class.text-success]="l.tipo === 'CREDITO'" [class.text-danger]="l.tipo === 'CREDITO'">
+                {{ l.tipo === 'CREDITO' ? '+' : '-' }}{{ l.valor | currencyBr }}
+              </span>
+            </td>
+
+            <td style="text-align:right">
+              <span [class.text-success]="l.tipo === 'DEBITO'" [class.text-danger]="l.tipo === 'DEBITO'">
+                {{ l.tipo === 'DEBITO' ? '+' : '-' }}{{ l.valor | currencyBr }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

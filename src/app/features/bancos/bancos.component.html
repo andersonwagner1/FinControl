@@ -1,0 +1,91 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Bancos</h1>
+      <p class="page-subtitle">Gerencie as instituições financeiras</p>
+    </div>
+    <button class="btn btn-primary" (click)="abrirModalParaAdicionar()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Novo Banco
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Logo</th>
+            <th>Nome</th>
+            <th>Cor Principal</th>
+            <th>Cor Secundária</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let banco of bancos">
+            <td>
+              <div class="banco-logo-preview" [style.background]="banco.cor + '25'" [style.color]="banco.cor">
+                {{ banco.logo }}
+              </div>
+            </td>
+            <td>{{ banco.nome }}</td>
+            <td>
+              <div class="color-preview">
+                <div class="color-box" [style.background]="banco.cor"></div>
+                <span>{{ banco.cor }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="color-preview">
+                <div class="color-box" [style.background]="banco.corSecundaria"></div>
+                <span>{{ banco.corSecundaria }}</span>
+              </div>
+            </td>
+            <td>
+              <button class="btn btn-ghost btn-sm" (click)="abrirModalParaEditar(banco)">Editar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showModal" (click)="fecharModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ isEditando ? 'Editar Banco' : 'Novo Banco' }}</h3>
+      <button class="modal-close" (click)="fecharModal()">×</button>
+    </div>
+
+    <div class="form-error" *ngIf="mensagemErro">{{ mensagemErro }}</div>
+
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="salvarBanco()">
+      <div class="form-group">
+        <label class="form-label">Nome do Banco *</label>
+        <input class="form-control" type="text" formControlName="nome" placeholder="Ex: Banco do Brasil">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Logo (Texto/Ícone) *</label>
+        <input class="form-control" type="text" formControlName="logo" placeholder="Ex: BB">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Cor Principal *</label>
+          <input class="form-control" type="color" formControlName="cor">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cor Secundária *</label>
+          <input class="form-control" type="color" formControlName="corSecundaria">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" (click)="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>

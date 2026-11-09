@@ -1,0 +1,66 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Cadastros do sistema</p>
+      <h1 class="page-title">Categorias</h1>
+      <p class="page-subtitle">Organize seus lançamentos por tipo e mantenha os cadastros ativos</p>
+    </div>
+    <button class="btn btn-primary" type="button" (click)="abrirModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Nova categoria
+    </button>
+  </div>
+
+  <div class="filter-bar">
+    <span class="filter-label">Tipo</span>
+    <button class="filter-chip" [class.active]="filtroTipo === 'todos'" (click)="filtroTipo = 'todos'; aplicarFiltros()">Todos</button>
+    <button class="filter-chip" [class.active]="filtroTipo === 'CREDITO'" (click)="filtroTipo = 'CREDITO'; aplicarFiltros()">Crédito</button>
+    <button class="filter-chip" [class.active]="filtroTipo === 'DEBITO'" (click)="filtroTipo = 'DEBITO'; aplicarFiltros()">Débito</button>
+    <button class="filter-chip" [class.active]="filtroTipo === 'TODOS'" (click)="filtroTipo = 'TODOS'; aplicarFiltros()">Transferência</button>
+    <span class="filter-separator"></span>
+    <span class="filter-label">Status</span>
+    <select class="filter-select" [(ngModel)]="filtroStatus" (change)="aplicarFiltros()">
+      <option value="A">Ativos</option>
+      <option value="I">Inativos</option>
+      <option value="todos">Todos</option>
+    </select>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card"><span>Registros exibidos</span><strong>{{ categoriasFiltradas.length }}</strong></div>
+    <div class="summary-card"><span>Créditos ativos</span><strong>{{ getTotal('CREDITO', 'SIM') }}</strong></div>
+    <div class="summary-card"><span>Débitos ativos</span><strong>{{ getTotal('DEBITO', 'SIM') }}</strong></div>
+    <div class="summary-card"><span>Transferências</span><strong>{{ getTotal('TRANSFERENCIA', 'SIM') }}</strong></div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead><tr><th>Categoria</th><th>Código do tipo</th><th>Tipo</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let categoria of categoriasFiltradas">
+            <td><strong>{{ categoria.nome }}</strong><div class="id-text">ID: {{ categoria.id }}</div></td>
+            <td><span class="code-badge">{{ categoria.tipo }}</span></td>
+            <td><span class="type-badge type-{{ categoria.tipo }}">{{ tipos[categoria.tipo] }}</span></td>
+            <td><span class="status-badge" [class.inactive]="categoria.ativo === 'NAO'">{{ status[categoria.ativo] }} ({{ categoria.ativo }})</span></td>
+            <td><div class="row-actions"><button class="btn btn-ghost btn-sm" type="button" (click)="abrirModal(categoria)" title="Editar">Editar</button><button class="btn btn-ghost btn-sm" type="button" (click)="alternarStatus(categoria)">{{ categoria.ativo === 'SIM' ? 'Inativar' : 'Ativar' }}</button><button class="btn btn-ghost btn-sm danger" type="button" (click)="excluir(categoria)" title="Excluir">Excluir</button></div></td>
+          </tr>
+          <tr *ngIf="categoriasFiltradas.length === 0"><td colspan="5" class="empty-state">Nenhuma categoria encontrada.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showModal" (click)="fecharModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header"><h3>{{ editando ? 'Editar categoria' : 'Nova categoria' }}</h3><button class="modal-close" type="button" (click)="fecharModal()">×</button></div>
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="salvar()">
+      <div class="form-group"><label class="form-label" for="categoria-nome">Nome *</label><input id="categoria-nome" class="form-control" type="text" formControlName="nome" placeholder="Ex: Alimentação"></div>
+      <div class="form-group"><label class="form-label" for="categoria-tipo">Tipo *</label><select id="categoria-tipo" class="form-control" formControlName="tipo"><option value="C">C - Crédito</option><option value="D">D - Débito</option><option value="T">T - Transferência</option></select></div>
+      <div class="modal-footer"><button class="btn btn-ghost" type="button" (click)="fecharModal()">Cancelar</button><button class="btn btn-primary" type="submit" [disabled]="form.invalid">Salvar categoria</button></div>
+    </form>
+  </div>
+</div>

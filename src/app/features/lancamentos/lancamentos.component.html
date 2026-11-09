@@ -1,0 +1,386 @@
+<div class="page-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Lançamentos</h1>
+      <p class="page-subtitle">Registre créditos e débitos em suas contas</p>
+    </div>
+    <div class="action-btns">
+      <button class="btn btn-success" (click)="abrirModal('CREDITO')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Novo Crédito
+      </button>
+      <button class="btn btn-danger" (click)="abrirModal('DEBITO')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Novo Débito
+      </button>
+      <button class="btn btn-primary" (click)="abrirModal('TRANSFERENCIA')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path d="M7 7h13l-3-3M17 17H4l3 3"/><path d="M20 7l-3 3M4 17l3-3"/>
+        </svg>
+        Transferência
+      </button>
+      <button class="btn btn-primary" (click)="atualizarMovimentacao()" [disabled]="filtroConta === 'todas' || processandoAcao">
+        {{ processandoAcao ? 'Atualizando...' : 'Atualizar' }}
+      </button>
+      <button class="btn btn-ghost" (click)="abrirModalSaldo()" [disabled]="filtroConta === 'todas' || processandoAcao">
+        Saldo
+      </button>
+    </div>
+  </div>
+
+  <div class="alert-success" *ngIf="mensagemAcaoSucesso">{{ mensagemAcaoSucesso }}</div>
+  <div class="alert-danger" *ngIf="mensagemAcaoErro">{{ mensagemAcaoErro }}</div>
+
+  <!-- Summary cards -->
+  <div class="summary-row">
+    <div class="summary-card summary-card--credito">
+      <div class="summary-icon">↑</div>
+      <div>
+        <div class="summary-label">Saldo Inicial</div>
+        <div class="summary-val text-success">{{ saldoInicial | currencyBr }}</div>
+      </div>
+    </div>
+    <div class="summary-card summary-card--credito">
+      <div class="summary-icon">↑</div>
+      <div>
+        <div class="summary-label">Total Créditos</div>
+        <div class="summary-val text-success">{{ totalCreditos | currencyBr }}</div>
+      </div>
+    </div>
+    <div class="summary-card summary-card--debito">
+      <div class="summary-icon">↓</div>
+      <div>
+        <div class="summary-label">Total Débitos</div>
+        <div class="summary-val text-danger">{{ totalDebitos | currencyBr }}</div>
+      </div>
+    </div>
+    <div class="summary-card" [class.summary-card--pos]="(totalCreditos)>=0" [class.summary-card--neg]="(totalCreditos)<0">
+      <div class="summary-icon">⚖</div>
+      <div>
+        <div class="summary-label">Saldo (filtrado)</div>
+        <div class="summary-val" [class.text-success]="(totalCreditos)>=0" [class.text-danger]="(totalCreditos)<0">
+          {{ (saldoInicial +totalCreditos-totalDebitos) | currencyBr }}
+        </div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-icon">#</div>
+      <div>
+        <div class="summary-label">Lançamentos</div>
+        <div class="summary-val">{{ totalLancamentos }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <span class="filter-label">Tipo</span>
+    <button class="filter-chip" [class.active]="filtroTipo==='todos'" (click)="filtroTipo='todos'; aplicarFiltros()">Todos</button>
+    <button class="filter-chip" [class.active]="filtroTipo==='credito'" (click)="filtroTipo='credito'; aplicarFiltros()">▲ Créditos</button>
+    <button class="filter-chip" [class.active]="filtroTipo==='debito'" (click)="filtroTipo='debito'; aplicarFiltros()">▼ Débitos</button>
+
+    <div style="width:1px;height:20px;background:var(--border);margin:0 0.25rem"></div>
+
+    <span class="filter-label">Conta</span>
+    <select class="filter-select" [(ngModel)]="filtroConta" (change)="alterarConta()">
+      <option value="todas">Todas as contas</option>
+      <!--<optgroup *ngFor="let b of bancos" [label]="b.nome">
+        <option *ngFor="let c of getContasDisponiveisPorBanco(b.id)" [value]="c.id">
+          {{ tiposConta[c.tipo].icone }} {{ c.descricao }}
+        </option>
+      </optgroup>-->
+      <ng-container *ngFor="let b of bancos">
+        <optgroup *ngIf="getContasDisponiveisPorBanco(b.id).length > 0" [label]="b.nome">
+          <option *ngFor="let c of getContasDisponiveisPorBanco(b.id)" [value]="c.id">
+            {{ tiposConta[c.tipo].icone }} {{ c.descricao }}
+          </option>
+        </optgroup>
+      </ng-container>
+
+
+    </select>
+
+    <div style="width:1px;height:20px;background:var(--border);margin:0 0.25rem"></div>
+
+    <span class="filter-label">Competência</span>
+    <button type="button" class="btn btn-ghost btn-sm" (click)="alterarMesCompetencia(-1)" title="Competência anterior" aria-label="Competência anterior">‹</button>
+    <input class="filter-select" type="month" [(ngModel)]="filtroCompetencia" (change)="alterarCompetencia()">
+    <button type="button" class="btn btn-ghost btn-sm" (click)="alterarMesCompetencia(1)" title="Próxima competência" aria-label="Próxima competência">›</button>
+    <span class="periodo-consulta">{{ periodoConsulta.dataInicio | date:'dd/MM/yyyy' }} a {{ periodoConsulta.dataFim | date:'dd/MM/yyyy' }}</span>
+  </div>
+
+  <!-- Table -->
+  <div class="card table-card">
+    <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Tipo</th>         
+          <th>Conta</th>
+          <th>Banco</th>
+          <th>Categoria</th>
+          <th>Observação</th>
+          <th style="text-align:right">Valor</th>
+          <th style="text-align:right">Saldo Após</th>
+          <th style="text-align:center">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let l of lancamentosFiltrados" [class.row-credito]="l.tipo==='CREDITO'" [class.row-debito]="l.tipo==='DEBITO'">
+          <td class="text-secondary">{{ l.data | date:'dd/MM/yyyy' }}</td>
+          <td>
+            <span class="tipo-pill" 
+                [class.credito]="l.tipo === 'CREDITO'" 
+                [class.debito]="l.tipo === 'DEBITO'"
+                [class.transferencia]="l.tipo === 'TRANSFERENCIA'"
+                [class.aplicacao]="l.tipo === 'APLICACAO'"
+                [class.resgate]="l.tipo === 'RESGATE'">
+                  {{ 
+                    l.tipo === 'CREDITO' ? '▲ Crédito' :
+                    l.tipo === 'DEBITO' ? '▼ Débito' :
+                    l.tipo === 'TRANSFERENCIA' ? '⇄ Transferência' :
+                    l.tipo === 'APLICACAO' ? '🏦 Aplicação' :
+                    l.tipo === 'RESGATE' ? '💰 Resgate' : l.tipo
+                  }}
+              </span>
+          </td>          
+          <td>
+            <div class="conta-cell">
+              <div class="conta-dot" [style.background]="getBancoCor(l.bancoContaId)"></div>
+              <div>
+                <div class="conta-nome">{{ l.conta }}</div>
+                <span class="badge-tipo badge-{{ getContaTipo(l.bancoContaId) }}" style="font-size:0.68rem">{{ getContaTipo(l.bancoContaId) }}</span>
+              </div>
+            </div>
+          </td>
+          <td class="text-secondary">{{ l.banco }} - {{l.id}}</td>
+          <td><span class="cat-chip">{{ l.tipoMovimentacao }}</span></td>
+          <td class="text-muted" style="font-size:0.82rem">{{ l.observacao || '—' }}</td>
+          <td style="text-align:right">
+            <span class="valor-cell" [class.text-success]="(l.valor > 0.0)" [class.text-danger]="(l.valor < 0.0)">
+              {{ l.valor > 0.0 ? '+' : '' }}{{ l.valor | currencyBr }}
+            </span>
+          </td>
+          <td style="text-align:right" class="text-secondary" style="font-size:0.82rem">
+            {{ l.saldo | currencyBr }}
+          </td>
+          <td style="text-align:center">
+            <div style="display:flex;gap:4px;justify-content:center;">
+              <button class="btn btn-ghost btn-sm" (click)="editarLancamento(l)" title="Editar" [disabled]="l.transferenciaId">✏️</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--danger)" (click)="excluirLancamento(l)" title="Excluir" [disabled]="l.transferenciaId">🗑️</button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="lancamentosFiltrados.length === 0">
+          <td colspan="10" style="text-align:center;padding:3rem;color:var(--text-muted)">
+            Nenhum lançamento encontrado.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="table-pagination" *ngIf="totalPaginas > 1">
+      <button class="btn btn-ghost btn-sm" (click)="alterarPagina(-1)" [disabled]="paginaAtual === 0">Anterior</button>
+      <span>Página {{ paginaAtual + 1 }} de {{ totalPaginas }}</span>
+      <button class="btn btn-ghost btn-sm" (click)="alterarPagina(1)" [disabled]="paginaAtual + 1 >= totalPaginas">Próxima</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmação de exclusão -->
+<div class="modal-overlay" *ngIf="showConfirmacaoExclusao" (click)="cancelarExclusao()">
+  <div class="modal-box delete-confirmation" role="dialog" aria-modal="true" aria-labelledby="titulo-confirmacao-exclusao" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="titulo-confirmacao-exclusao">Excluir lançamento?</h3>
+      <button type="button" class="modal-close" (click)="cancelarExclusao()" aria-label="Fechar">×</button>
+    </div>
+    <p class="delete-confirmation-text">
+      Deseja realmente excluir o lançamento
+      <strong>{{ lancamentoParaExcluir?.tipoMovimentacao }}</strong>?
+    </p>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" (click)="cancelarExclusao()">Cancelar</button>
+      <button type="button" class="btn btn-danger" (click)="confirmarExclusao()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo Lançamento -->
+<div class="modal-overlay" *ngIf="showModal" >
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>
+        <span *ngIf="tipoModal==='CREDITO'" class="text-success">{{ isEditando ? 'Editar Crédito' : '▲ Novo Crédito' }}</span>
+        <span *ngIf="tipoModal==='DEBITO'" class="text-danger">{{ isEditando ? 'Editar Débito' : '▼ Novo Débito' }}</span>
+        <span *ngIf="tipoModal==='TRANSFERENCIA'" style="color:var(--text)">⇄ Nova Transferência</span>
+      </h3>
+      <button class="modal-close" (click)="fecharModal()">×</button>
+    </div>
+    
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="salvarLancamento()">
+      <div class="modal-body">
+        <div class="alert-success" *ngIf="mensagemSucesso">
+          {{ mensagemSucesso }}
+        </div>
+        <div class="alert-danger" *ngIf="mensagemErro">
+          {{ mensagemErro }}
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">{{ tipoModal === 'TRANSFERENCIA' ? 'Conta de Origem *' : 'Conta *' }}</label>
+          <select class="form-control" formControlName="bancoContaId" >
+
+             <ng-container *ngFor="let b of bancos">
+                  <optgroup *ngIf="getContasDisponiveisPorBanco(b.id).length > 0" [label]="b.nome">
+                  <option *ngFor="let c of getContasDisponiveisPorBanco(b.id)" [value]="c.id">
+                    {{ tiposConta[c.tipo].icone }} {{ c.descricao }} — {{ c.saldo | currencyBr }}
+                  </option>
+                </optgroup>
+              </ng-container>
+            
+              <!--<ng-container *ngFor="let b of bancos">
+                  <optgroup *ngIf="getContasDisponiveisPorBanco(b.id).length > 0" [label]="b.nome">
+                   <option *ngFor="let c of contasDisponiveis | contasByBanco:b.id" [value]="c.id">
+                    {{ tiposConta[c.tipo].icone }} {{ c.descricao }} — {{ c.saldo | currencyBr }}
+                  </option>
+                </optgroup>
+              </ng-container> -->
+
+
+              <!--
+            <optgroup *ngFor="let b of bancos" [label]="b.nome">
+              <option *ngFor="let c of contasDisponiveis | contasByBanco:b.id" [value]="c.id">
+                {{ tiposConta[c.tipo].icone }} {{ c.descricao }} — {{ c.saldo | currencyBr }}
+              </option>
+            </optgroup>-->
+          </select>
+          <div class="error-hint" *ngIf="tipoModal === 'TRANSFERENCIA' && form.hasError('mesmaConta')">
+            Origem e destino devem ser contas diferentes.
+          </div>
+        </div>
+
+        <div class="form-group" *ngIf="tipoModal === 'TRANSFERENCIA'">
+          <label class="form-label">Conta de Destino *</label>
+          <select class="form-control" formControlName="bancoContaDestinoId" (change)="listarAplicacoesPorBancoConta()">
+               <ng-container *ngFor="let b of bancos">
+                  <optgroup *ngIf="getContasDisponiveisPorBanco(b.id).length > 0" [label]="b.nome">
+                  <option *ngFor="let c of getContasDisponiveisPorBanco(b.id)" [value]="c.id">
+                    {{ tiposConta[c.tipo].icone }} {{ c.descricao }} — {{ c.saldo | currencyBr }}
+                  </option>
+                </optgroup>
+              </ng-container>
+
+
+            <!--
+            <optgroup *ngFor="let b of bancos" [label]="b.nome">
+              <option *ngFor="let c of contasDisponiveis | contasByBanco:b.id" [value]="c.id" [disabled]="c.id === form.get('contaId')?.value">
+                {{ tiposConta[c.tipo].icone }} {{ c.descricao }}
+              </option>
+            </optgroup>-->
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="tipoModal === 'TRANSFERENCIA'">
+          <label class="form-label">Tipo de operação</label>
+          <div class="operation-select" role="group" aria-label="Tipo de operação">
+            <button type="button" class="operation-option"
+              [class.active]="form.get('tipoTransferencia')?.value === 'TRANSFERENCIA'"
+              [attr.aria-pressed]="form.get('tipoTransferencia')?.value === 'TRANSFERENCIA'"
+              (click)="selecionarTipoTransferencia('TRANSFERENCIA')">
+              Transferência
+            </button>
+            <button type="button" class="operation-option"
+              [class.active]="form.get('tipoTransferencia')?.value === 'APLICACAO'"
+              [attr.aria-pressed]="form.get('tipoTransferencia')?.value === 'APLICACAO'"
+              (click)="selecionarTipoTransferencia('APLICACAO')">
+              Aplicação
+            </button>
+            <button type="button" class="operation-option"
+              [class.active]="form.get('tipoTransferencia')?.value === 'RESGATE'"
+              [attr.aria-pressed]="form.get('tipoTransferencia')?.value === 'RESGATE'"
+              (click)="selecionarTipoTransferencia('RESGATE')">
+              Resgate
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group" *ngIf="tipoModal === 'TRANSFERENCIA' && form.get('tipoTransferencia')?.value !== 'TRANSFERENCIA'">
+          <label class="form-label">Investimento</label>
+          <select class="form-control" formControlName="investimento">
+
+
+
+            <option value="">Selecione o investimento...</option>
+            <option *ngFor="let investimento of investimentos" [value]="investimento.id">
+              {{ investimento.nome }}
+            </option>
+          </select>
+          <small class="form-hint">Selecione o investimento relacionado à operação.</small>
+        </div>
+       
+
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Valor (R$) *</label>
+            <input class="form-control" type="number" step="0.01" formControlName="valor" placeholder="0,00" />
+          </div>
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Data *</label>
+            <input class="form-control" type="date" formControlName="data" />
+          </div>        
+        </div>
+
+        <div class="form-group" *ngIf="tipoModal !== 'TRANSFERENCIA'">
+          <label class="form-label">Categoria *</label>
+          <select class="form-control" formControlName="tipoMovimentacaoId">
+            <option value="">Selecione...</option>
+            <option *ngFor="let cat of categoriasForm" [value]="cat.id">{{ cat.nome }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Observação (Opcional)</label>
+          <textarea class="form-control" formControlName="observacao" rows="2" placeholder="Alguma anotação extra..."></textarea>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" (click)="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn"   [class.btn-success]="tipoModal==='CREDITO'" [class.btn-danger]="tipoModal==='DEBITO'" [disabled]="form.invalid || salvando">
+          <ng-container *ngIf="tipoModal !== 'TRANSFERENCIA'">
+            {{ salvando ? 'Salvando...' : (isEditando ? 'Salvar Alterações' : 'Registrar ' + (tipoModal === 'CREDITO' ? 'Crédito' : 'Débito')) }}
+          </ng-container>
+          <ng-container *ngIf="tipoModal === 'TRANSFERENCIA'">
+            {{ salvando ? 'Salvando...' : 'Registrar Transferência' }}
+          </ng-container>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de saldo final -->
+<div class="modal-overlay" *ngIf="showSaldoModal" (click)="fecharModalSaldo()">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="titulo-saldo-final" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="titulo-saldo-final">Saldo final</h3>
+      <button type="button" class="modal-close" (click)="fecharModalSaldo()" [disabled]="processandoAcao" aria-label="Fechar">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="saldo-final">Digite o saldo final</label>
+      <input id="saldo-final" class="form-control" type="number" step="0.01" [(ngModel)]="saldoFinalInformado" [disabled]="processandoAcao" autofocus />
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" (click)="fecharModalSaldo()" [disabled]="processandoAcao">Cancelar</button>
+      <button type="button" class="btn btn-primary" (click)="salvarSaldoFinal()" [disabled]="saldoFinalInformado === null || processandoAcao">
+        {{ processandoAcao ? 'Salvando...' : 'Atualizar saldo' }}
+      </button>
+    </div>
+  </div>
+</div>

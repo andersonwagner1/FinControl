@@ -10,7 +10,10 @@ trim_trailing_whitespace = true
 
 [*.ts]
 quote_type = single
+<<<<<<< HEAD
 ij_typescript_use_double_quotes = false
+=======
+>>>>>>> 1d887224bf98157575a37a4f0d18df1c0dd26c86
 
 [*.md]
 max_line_length = off

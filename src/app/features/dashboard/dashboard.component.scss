@@ -1,0 +1,181 @@
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.period-filter-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.period-filter-bar h2 { margin: 0; color: white; font-size: 1rem; font-weight: 700; }
+.period-filters { display: flex; align-items: end; gap: 0.65rem; }
+.period-filters label { display: flex; flex-direction: column; gap: 0.25rem; color: var(--text-muted); font-size: 0.68rem; }
+.period-filters input { min-height: 32px; border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.45rem; background: rgba(255,255,255,0.04); color: var(--text-primary); font: inherit; color-scheme: dark; }
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1rem;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+  }
+
+  .card-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    display: block;
+  }
+}
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+
+  &--wide { flex: 1; }
+}
+
+.chart-wrapper {
+  padding: 1.25rem;
+  height: 280px;
+  position: relative;
+  canvas { max-height: 100%; }
+}
+
+.expense-chart-card { margin-bottom: 1rem; overflow: hidden; }
+.expense-chart-content { min-height: 300px; padding: 1rem; }
+.expense-chart-wrapper { position: relative; width: 100%; height: 300px; }
+.expense-chart-message { padding: 2rem 1rem; color: var(--text-muted); text-align: center; }
+.patrimonio-chart-card { margin-bottom: 1rem; }
+.fluxo-mensal-chart-card { margin-bottom: 1rem; }
+.report-card { margin-bottom: 1rem; overflow: hidden; }
+.report-table-wrap { overflow-x: auto; }
+.report-table { width: 100%; min-width: 1500px; border-collapse: collapse; }
+.report-table th, .report-table td { padding: 0.7rem 0.85rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 0.78rem; text-align: right; white-space: nowrap; }
+.report-table thead th { color: var(--text-muted); font-weight: 700; }
+.report-table th:first-child, .report-table tbody th { position: sticky; left: 0; background: var(--bg-card); text-align: left; text-transform: capitalize; }
+.report-table .report-total { color: var(--text-primary); font-weight: 700; }
+
+.sankey-card { overflow: hidden; }
+.sankey-card--legacy { display: none; }
+.sankey-chart { height: 390px; min-height: 260px; }
+
+// Banks grid
+.banks-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.bank-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.1rem 1.5rem;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: background 0.2s;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: rgba(255,255,255,0.02); }
+
+  .bank-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .bank-info {
+    flex: 1;
+
+    .bank-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 0.2rem;
+    }
+
+    .bank-saldo {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+    }
+
+    .bank-types {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+  }
+
+  .bank-count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+
+    .count-num {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-secondary);
+    }
+
+    .count-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+  }
+}
+
+// Transaction table extras
+.categoria-chip {
+  padding: 0.2rem 0.6rem;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.tipo-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.credito { color: #4ade80; }
+  &.debito { color: #fb7185; }
+}
+
+@media (max-width: 800px) {
+  .sankey-chart { height: 480px; }
+  .sankey-card--echarts .card-header { align-items: flex-start; flex-direction: column; gap: 0.85rem; }
+  .period-filter-bar { align-items: flex-start; flex-direction: column; }
+  .period-filters { width: 100%; }
+  .period-filters label { flex: 1; }
+  .period-filters input { width: 100%; box-sizing: border-box; }
+}

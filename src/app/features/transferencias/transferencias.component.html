@@ -1,0 +1,149 @@
+<div class="page-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Transferências</h1>
+      <p class="page-subtitle">Mova valores entre suas contas e investimentos</p>
+    </div>
+    <button class="btn btn-primary" (click)="abrirModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+        <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+      </svg>
+      Nova Transferência
+    </button>
+  </div>
+
+  <!-- Total transferido -->
+  <div class="transfer-summary">
+    <div class="ts-card">
+      <div class="ts-icon">↔</div>
+      <div class="ts-info">
+        <div class="ts-label">Total Transferências</div>
+        <div class="ts-val">{{ transferencias.length }}</div>
+      </div>
+    </div>
+    <div class="ts-card">
+      <div class="ts-icon">💸</div>
+      <div class="ts-info">
+        <div class="ts-label">Volume Total</div>
+        <div class="ts-val">{{ transferencias | totalTransferido | currencyBr }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- List -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Histórico de Transferências</h3>
+    </div>
+    <div *ngIf="transferencias.length === 0" class="empty-state">
+      Nenhuma transferência registrada.
+    </div>
+    <div class="transfer-list">
+      <div *ngFor="let t of transferencias" class="transfer-item">
+        <div class="transfer-date">
+          <div class="t-day">{{ t.data | date:'dd' }}</div>
+          <div class="t-month">{{ t.data | date:'MMM' | uppercase }}</div>
+        </div>
+        <div class="transfer-flow">
+          <div class="account-chip">
+            <div class="chip-dot" [style.background]="getBancoCor(t.contaOrigemId)"></div>
+            <div class="chip-info">
+              <div class="chip-name">{{ getContaNome(t.contaOrigemId) }}</div>
+              <div class="chip-bank">{{ getBancoNome(t.contaOrigemId) }} ·
+                <span class="badge-tipo badge-{{ getContaTipo(t.contaOrigemId) }}" style="font-size:0.68rem">{{ getContaTipo(t.contaOrigemId) }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flow-arrow">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </div>
+          <div class="account-chip">
+            <div class="chip-dot" [style.background]="getBancoCor(t.contaDestinoId)"></div>
+            <div class="chip-info">
+              <div class="chip-name">{{ getContaNome(t.contaDestinoId) }}</div>
+              <div class="chip-bank">{{ getBancoNome(t.contaDestinoId) }} ·
+                <span class="badge-tipo badge-{{ getContaTipo(t.contaDestinoId) }}" style="font-size:0.68rem">{{ getContaTipo(t.contaDestinoId) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="transfer-desc text-secondary">{{ t.descricao }}</div>
+        <div class="transfer-valor">{{ t.valor | currencyBr }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Transferência -->
+<div class="modal-overlay" *ngIf="showModal" (click)="fecharModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Nova Transferência</h3>
+      <button class="modal-close" (click)="fecharModal()">×</button>
+    </div>
+
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="realizarTransferencia()">
+      <div class="form-group">
+        <label class="form-label">Conta Origem *</label>
+        <select class="form-control" formControlName="contaOrigemId">
+          <option value="">Selecione a conta de origem</option>
+          <optgroup *ngFor="let b of bancos" [label]="b.nome">
+            <option *ngFor="let c of contas | contasByBanco:b.id" [value]="c.id">
+              {{ tiposConta[c.tipo].icone }} {{ c.descricao }} — {{ c.saldo | currencyBr }}
+            </option>
+          </optgroup>
+        </select>
+        <div class="saldo-info" *ngIf="form.get('contaOrigemId')?.value">
+          Saldo disponível: <strong class="text-success">{{ saldoOrigem | currencyBr }}</strong>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Conta Destino *</label>
+        <select class="form-control" formControlName="contaDestinoId">
+          <option value="">Selecione a conta de destino</option>
+          <optgroup *ngFor="let b of bancos" [label]="b.nome">
+            <option *ngFor="let c of contas | contasByBanco:b.id" [value]="c.id">
+              {{ tiposConta[c.tipo].icone }} {{ c.descricao }}
+            </option>
+          </optgroup>
+        </select>
+        <div class="error-hint" *ngIf="form.hasError('mesmaConta')">
+          ⚠ Origem e destino não podem ser a mesma conta.
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Valor *</label>
+          <input class="form-control" type="number" formControlName="valor" placeholder="0,00" step="0.01" min="0.01">
+          <div class="error-hint" *ngIf="form.get('valor')?.value > saldoOrigem && saldoOrigem > 0">
+            ⚠ Valor maior que o saldo disponível.
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data *</label>
+          <input class="form-control" type="date" formControlName="data">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição *</label>
+        <input class="form-control" type="text" formControlName="descricao" placeholder="Ex: Aporte mensal tesouro">
+      </div>
+
+      <div class="alert-danger" *ngIf="erroTransferencia">{{ erroTransferencia }}</div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" (click)="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid">
+          Transferir
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

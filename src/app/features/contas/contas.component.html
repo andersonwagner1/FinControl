@@ -1,0 +1,185 @@
+<div class="page-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Contas</h1>
+      <p class="page-subtitle">Gerencie todas as suas contas bancárias e investimentos</p>
+    </div>
+    <button class="btn btn-primary" (click)="abrirModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Nova Conta
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <span class="filter-label">Categoria</span>
+    <button class="filter-chip" [class.active]="filtroCategoria === 'todos'" (click)="setFiltroCategoria('todos')">Todos</button>
+    <button class="filter-chip" [class.active]="filtroCategoria === 'bancaria'" (click)="setFiltroCategoria('bancaria')">🏦 Bancárias</button>
+    <button class="filter-chip" [class.active]="filtroCategoria === 'investimento'" (click)="setFiltroCategoria('investimento')">📈 Investimentos</button>
+
+    <div style="width: 1px; height: 20px; background: var(--border); margin: 0 0.25rem;"></div>
+
+    <span class="filter-label">Banco</span>
+    <select class="filter-select" [(ngModel)]="filtroBanco" (change)="aplicarFiltros()">
+      <option value="todos">Todos os bancos</option>
+      <option *ngFor="let b of bancos" [value]="b.id">{{ b.nome }}</option>
+    </select>
+
+    <span class="filter-label">Tipo</span>
+    <select class="filter-select" [(ngModel)]="filtroTipo" (change)="aplicarFiltros()">
+      <option value="todos">Todos os tipos</option>
+      <option *ngFor="let t of tiposDisponiveis" [value]="t">{{ tiposConta[t].icone }} {{ tiposConta[t].label }}</option>
+    </select>
+  </div>
+
+  <!-- Summary bar -->
+  <div class="summary-bar card">
+    <div class="summary-item">
+      <span class="summary-label">Total filtrado</span>
+      <span class="summary-value">{{ getSaldoTotal() | currencyBr }}</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Contas encontradas</span>
+      <span class="summary-value">{{ contasFiltradas.length }}</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Descrição</th>
+            <th>Banco</th>
+            <th>Categoria</th>
+            <th>Rentab. / Índice</th>
+            <th>Vencimento</th>
+            <th>Data Abertura</th>
+            <th style="text-align:right">Saldo</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let conta of contasFiltradas" [class.investimento-row]="isInvestimento(conta.tipo)">
+            <td>
+              <span class="badge-tipo badge-{{ conta.tipo }}">
+                {{ tiposConta[conta.tipo].icone }} {{ conta.tipo }}
+              </span>
+            </td>
+            <td>
+              <div class="conta-descricao">{{ conta.descricao }}</div>
+              <div class="conta-id text-muted">ID: {{ conta.id }}</div>
+            </td>
+            <td>
+              <div class="banco-cell" *ngIf="getBanco(conta.bancoId) as banco">
+                <div class="banco-dot" [style.background]="banco.cor"></div>
+                <span>{{ banco.nome }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="categoria-chip" [class.invest-chip]="isInvestimento(conta.tipo)">
+                {{ isInvestimento(conta.tipo) ? 'Investimento' : 'Bancária' }}
+              </span>
+            </td>
+            <td>
+              <span *ngIf="conta.rentabilidade !== undefined" class="rentabilidade">
+                <span *ngIf="conta.tipo === 'RF'">{{ conta.rentabilidade }}% CDI</span>
+                <span *ngIf="conta.tipo === 'CP'">{{ conta.rentabilidade }}% CDI</span>
+                <span *ngIf="conta.tipo === 'FII'">{{ conta.rentabilidade }}% a.a.</span>
+                <span *ngIf="conta.tipo === 'RF'">SELIC + 0%</span>
+                <span *ngIf="conta.tipo === 'PREV'">IPCA + {{ conta.rentabilidade }}%</span>
+              </span>
+              <span *ngIf="conta.rentabilidade === undefined" class="text-muted">—</span>
+            </td>
+            <td>
+              <span *ngIf="conta.vencimento" class="text-secondary">{{ conta.vencimento | date:'dd/MM/yyyy' }}</span>
+              <span *ngIf="!conta.vencimento" class="text-muted">—</span>
+            </td>
+            <td class="text-secondary">{{ conta.dataAbertura | date:'dd/MM/yyyy' }}</td>
+            <td style="text-align:right">
+              <span class="saldo-value" [class.invest-saldo]="isInvestimento(conta.tipo)">
+                {{ conta.saldo | currencyBr }}
+              </span>
+            </td>
+            <td>
+              <span class="status-badge" [class.ativa]="conta.ativa">
+                {{ conta.ativa ? 'Ativa' : 'Inativa' }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="contasFiltradas.length === 0">
+            <td colspan="9" class="empty-state">Nenhuma conta encontrada com os filtros selecionados.</td>
+          </tr>
+        </tbody>
+        <tfoot *ngIf="contasFiltradas.length > 0">
+          <tr class="total-row">
+            <td colspan="7" style="text-align:right; font-weight: 600; color: var(--text-secondary)">TOTAL</td>
+            <td style="text-align:right">
+              <span class="saldo-value">{{ getSaldoTotal() | currencyBr }}</span>
+            </td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nova Conta -->
+<div class="modal-overlay" *ngIf="showModal" (click)="fecharModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Nova Conta</h3>
+      <button class="modal-close" (click)="fecharModal()">×</button>
+    </div>
+
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="salvarConta()">
+      <div class="form-group">
+        <label class="form-label">Banco *</label>
+        <select class="form-control" formControlName="bancoId">
+          <option value="">Selecione o banco</option>
+          <option *ngFor="let b of bancos" [value]="b.id">{{ b.nome }}</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tipo de Conta *</label>
+          <select class="form-control" formControlName="tipo">
+            <option *ngFor="let t of tiposDisponiveis" [value]="t">{{ tiposConta[t].icone }} {{ tiposConta[t].label }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Saldo Inicial *</label>
+          <input class="form-control" type="number" formControlName="saldo" placeholder="0,00" step="0.01" min="0">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição *</label>
+        <input class="form-control" type="text" formControlName="descricao" placeholder="Ex: CDB Nubank 120% CDI">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Rentabilidade (%)</label>
+          <input class="form-control" type="number" formControlName="rentabilidade" placeholder="Ex: 120" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vencimento</label>
+          <input class="form-control" type="date" formControlName="vencimento">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" (click)="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid">Salvar Conta</button>
+      </div>
+    </form>
+  </div>
+</div>
