@@ -1,0 +1,86 @@
+<section class="sankey-card" aria-label="Resumo mensal do fluxo financeiro">
+  <header class="sankey-heading">
+    <div>
+      <h2>Fluxo da conta corrente</h2>
+      <p>Entradas, despesas, aplicações e saldo remanescente</p>
+    </div>
+  </header>
+
+  @if (valorDoDeficit() > 0) {
+    <p class="sankey-warning" role="status">
+      As saídas excedem o saldo disponível em
+      <strong>{{ valorDoDeficit() | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>.
+      Confira os valores deste período.
+    </p>
+  }
+
+  <div
+    class="sankey-chart"
+    echarts
+    [options]="opcoes()"
+    role="img"
+    aria-label="Diagrama Sankey do fluxo financeiro da conta corrente"
+  ></div>
+
+  <section class="monthly-section" aria-labelledby="monthly-title">
+    <header class="monthly-heading">
+      <div>
+        <h2 id="monthly-title">Fluxo financeiro mensal</h2>
+        <p>Resumo contábil agrupado por mês e ano</p>
+      </div>
+      <label class="year-filter" for="monthly-year-filter">
+        <span>Ano</span>
+        <input
+          id="monthly-year-filter"
+          type="number"
+          min="1"
+          max="9999"
+          step="1"
+          inputmode="numeric"
+          [value]="anoFiltro() ?? ''"
+          (input)="alterarAno($event)"
+          aria-describedby="monthly-year-hint"
+        />
+        <span id="monthly-year-hint" class="year-filter-hint">Apague o ano para ver todos</span>
+      </label>
+    </header>
+    <div class="monthly-table-scroll" role="region" aria-label="Tabela mensal, role horizontal para ver todas as colunas" tabindex="0">
+      <table class="monthly-table">
+        <thead>
+          <tr>
+            <th scope="col">Mês/Ano</th>
+            <th scope="col">Saldo Anterior</th>
+            <th scope="col">Crédito</th>
+            <th scope="col">Renda</th>
+            <th scope="col">Total Crédito</th>
+            <th scope="col">Mensal</th>
+            <th scope="col">Débito</th>
+            <th scope="col">Total Débito</th>
+            <th scope="col">Aplicação</th>
+            <th scope="col">Resgate</th>
+            <th scope="col">Saldo Final</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (linha of linhasMensaisFiltradas(); track linha.ano + '-' + linha.mes) {
+            <tr>
+              <th scope="row" class="month-name">{{ nomeCompetencia(linha) }}</th>
+              <td>{{ linha.saldoAnterior | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              <td>{{ linha.credito | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              <td>{{ linha.renda | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              <td class="total-cell">{{ linha.totalCredito | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              <td>{{ linha.mensal | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              <td>{{ linha.debito | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              <td class="total-cell">{{ linha.totalDebito | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              <td>{{ linha.aplicacao | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              <td>{{ linha.resgate | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              <td class="final-balance">{{ linha.saldoFinal | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+            </tr>
+          } @empty {
+            <tr><td class="monthly-empty" colspan="11">Não há movimentações mensais para esta conta.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

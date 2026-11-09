@@ -1,0 +1,266 @@
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">CARTÕES</p>
+    <h1>Cartão de crédito</h1>
+    <p class="subtitle">Registre compras e acompanhe os gastos por competência.</p>
+  </div>
+  <button
+    class="primary-button"
+    type="button"
+    (click)="abrirModalNovoLancamento()"
+    [disabled]="!competenciaSelecionada() || !bancoContaSelecionadaId() || carregandoBancosContas() || carregandoTiposMovimentacao() || !!erroCompetencias() || !!erroTiposMovimentacao()"
+  >
+    <span aria-hidden="true">＋</span> Novo lançamento
+  </button>
+</div>
+
+<section class="filters" aria-label="Filtros de cartão de crédito">
+  <div class="filter-heading"><span class="filter-icon" aria-hidden="true">⌕</span><span>Filtrar por</span></div>
+  <label class="filter-field filter-month">
+    <span>Mês da competência</span>
+    <select [ngModel]="mesSelecionado()" (ngModelChange)="alterarMes(+$event)">
+      @for (mes of meses; track mes; let index = $index) {
+        <option [value]="index + 1">{{ mes }}</option>
+      }
+    </select>
+  </label>
+  <label class="filter-field filter-year">
+    <span>Ano</span>
+    <input type="number" min="1900" max="9999" step="1" [ngModel]="anoSelecionado()" (ngModelChange)="alterarAno(+$event)" />
+  </label>
+  <label class="filter-field account-filter">
+    <span>Banco / conta</span>
+    <select
+      [ngModel]="bancoContaSelecionadaId()"
+      (ngModelChange)="bancoContaSelecionadaId.set($event)"
+      [disabled]="carregandoBancosContas() || bancosContasDisponiveis().length === 0"
+    >
+      <option [ngValue]="null">Todas as contas</option>
+      @for (conta of bancosContasDisponiveis(); track conta.bancoContaId) {
+        <option [ngValue]="conta.bancoContaId">{{ conta.nomeBanco }} — {{ conta.nomeConta }}</option>
+      }
+    </select>
+  </label>
+</section>
+
+@if (carregandoBancosContas()) {
+  <p class="form-state-message" role="status">Carregando bancos e contas do período...</p>
+} @else if (erroBancosContas()) {
+  <div class="form-state-message form-state-error" role="alert">
+    <span>{{ erroBancosContas() }}</span>
+    <button class="retry-button" type="button" (click)="recarregarBancosContas()">Tentar novamente</button>
+  </div>
+}
+@if (erroCompetencias()) {
+  <div class="form-state-message form-state-error" role="alert">
+    <span>{{ erroCompetencias() }}</span>
+    <button class="retry-button" type="button" (click)="recarregarCompetencias()">Tentar novamente</button>
+  </div>
+} @else if (!carregandoCompetencias() && !competenciaSelecionada()) {
+  <p class="form-state-message" role="status">Não há competência cadastrada para o mês e ano selecionados.</p>
+}
+@if (erroTiposMovimentacao()) {
+  <div class="form-state-message form-state-error" role="alert">
+    <span>{{ erroTiposMovimentacao() }}</span>
+    <button class="retry-button" type="button" (click)="recarregarTiposMovimentacao()">Tentar novamente</button>
+  </div>
+}
+
+<section class="summary-grid" aria-label="Resumo de gastos do cartão">
+  <article class="summary-card balance-card">
+    <div class="card-top"><span>Saldo Anterior</span><span class="card-icon balance-icon" aria-hidden="true">↗</span></div>
+    <strong>{{ saldoAnterior() | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+    <span class="card-caption">Gastos da competência anterior</span>
+  </article>
+  <article class="summary-card">
+    <div class="card-top"><span>Saldo Atual</span><span class="card-icon expense-icon" aria-hidden="true">●</span></div>
+    <strong>{{ saldoAtual() | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+    <span class="card-caption">Gastos da competência selecionada</span>
+  </article>
+  <article class="summary-card">
+    <div class="card-top"><span>Saldo Mês Posterior</span><span class="card-icon count-icon" aria-hidden="true">→</span></div>
+    <strong>{{ saldoMesPosterior() | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+    <span class="card-caption">Gastos da próxima competência</span>
+  </article>
+  <article class="summary-card">
+    <div class="card-top"><span>Saldos Futuros</span><span class="card-icon income-icon" aria-hidden="true">＋</span></div>
+    <strong>{{ saldosFuturos() | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+    <span class="card-caption">Gastos a partir de M+2</span>
+  </article>
+</section>
+
+<dialog #modalNovoLancamento class="movement-dialog" aria-labelledby="modal-titulo" (click)="fecharModalAoClicarFora($event)">
+  <section class="movement-modal">
+    <header class="movement-modal-heading">
+      <div>
+        <p class="eyebrow">CARTÃO DE CRÉDITO</p>
+        <h2 id="modal-titulo">{{ lancamentoEditando() ? 'Editar lançamento' : 'Novo lançamento' }}</h2>
+        <p class="subtitle">{{ lancamentoEditando() ? 'A alteração se aplica somente a esta parcela.' : 'Registre a compra e distribua o valor pelas competências.' }}</p>
+      </div>
+      <button class="modal-close" type="button" aria-label="Fechar" (click)="fecharModalNovoLancamento()">×</button>
+    </header>
+
+    <form #formularioLancamento="ngForm" (ngSubmit)="salvarLancamento()">
+      <div class="modal-account">
+        <div><span>Banco / conta</span><strong>{{ bancoContaSelecionada()?.nomeBanco }} — {{ bancoContaSelecionada()?.nomeConta }}</strong></div>
+        <div><span>Competência</span><strong>{{ lancamentoEditando() ? competenciasPorId().get(lancamentoEditando()?.competenciaId ?? -1)?.dsMesAno : competenciaSelecionada()?.dsMesAno || 'Indisponível' }}</strong></div>
+      </div>
+
+      <div class="modal-form-grid">
+        @if (!lancamentoEditando()) {
+        <label class="modal-field modal-full-width">
+          <span>Tipo de movimentação <i>*</i></span>
+          <select
+            name="tipoMovimentacaoId"
+            [ngModel]="tipoMovimentacaoSelecionadoId()"
+            (ngModelChange)="tipoMovimentacaoSelecionadoId.set($event)"
+            required
+            [disabled]="carregandoTiposMovimentacao() || !!erroTiposMovimentacao() || tiposDebito().length === 0"
+          >
+            <option [ngValue]="null" disabled>Selecione um tipo de despesa</option>
+            @for (tipo of tiposDebito(); track tipo.id) {
+              <option [ngValue]="tipo.id">{{ tipo.dsTipoMovimentacao }} — {{ tipo.dsCategoria }}</option>
+            }
+          </select>
+        </label>
+        }
+        <label class="modal-field">
+          <span>Data da compra <i>*</i></span>
+          <input type="date" name="dataMovimentacao" [(ngModel)]="dataMovimentacao" required />
+        </label>
+        <label class="modal-field">
+          <span>{{ lancamentoEditando() ? 'Valor da parcela' : 'Valor total' }} <i>*</i></span>
+          <div class="modal-amount-input"><span>R$</span><input type="number" name="valorCompra" [(ngModel)]="valorCompra" required min="0.01" step="0.01" placeholder="0,00" /></div>
+        </label>
+        @if (!lancamentoEditando()) {
+        <label class="modal-field">
+          <span>Número de parcelas <i>*</i></span>
+          <input type="number" name="numeroParcelas" [(ngModel)]="numeroParcelas" required min="1" step="1" />
+        </label>
+        }
+        <label class="modal-field modal-full-width">
+          <span>Observação</span>
+          <textarea name="observacao" [(ngModel)]="observacao" rows="3" maxlength="255" placeholder="Descreva esta compra"></textarea>
+        </label>
+      </div>
+
+      @if (erroSalvamento()) {
+        <p class="modal-save-error" role="alert">{{ erroSalvamento() }}</p>
+      }
+      @if (!carregandoTiposMovimentacao() && !erroTiposMovimentacao() && tiposDebito().length === 0) {
+        <p class="modal-save-error" role="alert">Nenhum tipo de despesa está disponível para o lançamento.</p>
+      }
+
+      <footer class="modal-actions">
+        <span><i>*</i> Campos obrigatórios</span>
+        <div>
+          <button class="modal-cancel" type="button" (click)="fecharModalNovoLancamento()" [disabled]="salvandoLancamento()">Cancelar</button>
+          <button class="modal-save" type="submit" [disabled]="formularioLancamento.invalid || salvandoLancamento() || (!lancamentoEditando() && (!bancoContaSelecionadaId() || !competenciaSelecionada() || !tipoMovimentacaoSelecionadoId()))">
+            @if (salvandoLancamento()) {
+              Salvando...
+            } @else {
+              <span aria-hidden="true">✓</span> {{ lancamentoEditando() ? 'Salvar alterações' : 'Salvar lançamento' }}
+            }
+          </button>
+        </div>
+      </footer>
+    </form>
+  </section>
+</dialog>
+
+<section class="transactions">
+  <div class="section-heading">
+    <div><h2>Lançamentos do cartão</h2><p>Compras associadas à competência selecionada.</p></div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>DATA</th><th>DESCRIÇÃO</th><th>BANCO / CONTA</th><th>MÊS</th><th>ANO</th><th>PARCELAS</th><th class="amount-cell">VALOR</th><th>AÇÕES</th></tr>
+      </thead>
+      <tbody>
+        @if (carregandoLancamentos() || carregandoCompetencias()) {
+          <tr><td class="empty-state" colspan="8"><strong>Consultando lançamentos...</strong></td></tr>
+        } @else if (erroLancamentos()) {
+          <tr>
+            <td class="empty-state" colspan="8">
+              <strong>Não foi possível carregar os lançamentos</strong>
+              <span>{{ erroLancamentos() }}</span>
+              <button class="primary-button" type="button" (click)="recarregarLancamentos()">Tentar novamente</button>
+            </td>
+          </tr>
+        } @else {
+          @for (lancamento of linhasLancamentos(); track lancamento.id) {
+            <tr>
+              <td class="date-cell">{{ lancamento.dtMovimentacao | date:'dd MMM, yyyy':'':'pt-BR' }}</td>
+              <td>
+                <div class="movement-name">
+                  <span class="movement-indicator expense-indicator" aria-hidden="true">↑</span>
+                  <div class="movement-description"><strong>{{ lancamento.descricao }}</strong><span>{{ lancamento.tipoMovimentacao }}</span></div>
+                </div>
+              </td>
+              <td><span class="category-pill">{{ lancamento.conta }}</span></td>
+              <td>{{ meses[lancamento.competencia.nrMes - 1] }}</td>
+              <td>{{ lancamento.competencia.nrAno }}</td>
+              <td>{{ lancamento.nrParcelas }}x</td>
+              <td class="amount-cell expense-amount">{{ lancamento.vlCompra | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              <td class="actions-cell">
+                <div class="movement-actions">
+                  <button
+                    class="row-action-button edit-row-button"
+                    type="button"
+                    [disabled]="salvandoLancamento() || excluindoLancamento()"
+                    [attr.aria-label]="'Editar ' + lancamento.descricao"
+                    (click)="abrirEdicaoLancamento(lancamento)"
+                  >Editar</button>
+                  <button
+                    class="row-action-button delete-row-button"
+                    type="button"
+                    [disabled]="lancamento.possuiParcelasVinculadas || salvandoLancamento() || excluindoLancamento()"
+                    [attr.title]="lancamento.possuiParcelasVinculadas ? 'Exclua as parcelas vinculadas antes de excluir esta parcela.' : 'Excluir lançamento'"
+                    [attr.aria-label]="'Excluir ' + lancamento.descricao"
+                    (click)="abrirConfirmacaoExclusao(lancamento)"
+                  >Excluir</button>
+                  @if (lancamento.possuiParcelasVinculadas) {
+                    <small>Exclua as parcelas vinculadas antes de excluir esta parcela.</small>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-state" colspan="8">
+                <span class="empty-icon" aria-hidden="true">⌕</span>
+                <strong>Nenhum lançamento nesta competência</strong>
+                <span>Altere o período ou registre uma nova compra.</span>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<dialog #modalConfirmacaoExclusao class="movement-dialog confirmation-dialog" aria-labelledby="confirmacao-exclusao-titulo">
+  <section class="movement-modal">
+    <header class="movement-modal-heading">
+      <div>
+        <p class="eyebrow">CONFIRMAR EXCLUSÃO</p>
+        <h2 id="confirmacao-exclusao-titulo">Excluir lançamento?</h2>
+        <p class="subtitle">Esta ação excluirá somente a parcela selecionada e não pode ser desfeita.</p>
+      </div>
+    </header>
+    @if (erroExclusao()) {
+      <p class="modal-save-error" role="alert">{{ erroExclusao() }}</p>
+    }
+    <footer class="modal-actions">
+      <span></span>
+      <div>
+        <button class="modal-cancel" type="button" (click)="fecharConfirmacaoExclusao()" [disabled]="excluindoLancamento()">Cancelar</button>
+        <button class="modal-save delete-confirm-button" type="button" (click)="confirmarExclusaoLancamento()" [disabled]="excluindoLancamento()">
+          {{ excluindoLancamento() ? 'Excluindo...' : 'Sim, excluir' }}
+        </button>
+      </div>
+    </footer>
+  </section>
+</dialog>

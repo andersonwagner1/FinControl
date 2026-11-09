@@ -1,0 +1,21 @@
+.modal-field .type-select{width:100%;min-width:0;height:39px;padding:0 10px;background:#fff;border:1px solid #e1e6e9;border-radius:7px;color:#35434d;font-family:inherit;font-size:12px;outline:none}
+.modal-field .type-select:focus{border-color:#16836a;box-shadow:0 0 0 3px #16836a18}
+.type-filter{display:flex;flex-wrap:wrap;gap:7px}
+.type-filter-button{min-height:30px;padding:0 10px;background:#fff;border:1px solid #e1e6e9;border-radius:7px;color:#5f6b75;font:inherit;font-size:10px;font-weight:650;cursor:pointer}
+.type-filter-button:hover:not(:disabled),.type-filter-button.active-filter{background:#f3f6f5;border-color:#cdd8d3}
+.type-filter-button:disabled{opacity:.5;cursor:not-allowed}
+.type-filter-button.credit-filter{color:#16805f}
+.type-filter-button.debit-filter{color:#bd4d42}
+.type-filter-button.transfer-filter{color:#356fbd}
+.type-filter-button.credit-filter.active-filter{background:#edf8f2;border-color:#a9d8bd}
+.type-filter-button.debit-filter.active-filter{background:#fff3f1;border-color:#e5b7b0}
+.type-filter-button.transfer-filter.active-filter{background:#f0f5ff;border-color:#b5c9ee}
+.modal-field .type-select option.credit-option{color:#16805f}
+.modal-field .type-select option.debit-option{color:#bd4d42}
+.modal-field .type-select option.transfer-option{color:#356fbd}
+.modal-type-status,.modal-type-error{grid-column:1/-1;margin:0;font-size:10px}
+.modal-type-status{color:#87929d}
+.modal-type-error{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#a33d2b}
+.modal-type-error button{flex-shrink:0;padding:5px 8px;background:#fff;border:1px solid #e8c1b8;border-radius:6px;color:#a33d2b;font:inherit;cursor:pointer}
+.modal-type-error button:hover{background:#fff5f2}
+.modal-save-error{margin:14px 0 0;padding:10px 12px;background:#fff3f1;border:1px solid #e8c1b8;border-radius:7px;color:#a33d2b;font-size:11px;line-height:1.5}

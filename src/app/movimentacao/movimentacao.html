@@ -1,0 +1,301 @@
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">VISÃO GERAL</p>
+    <h1>Painel</h1>
+    <p class="subtitle">Acompanhe sua vida financeira em um só lugar.</p>
+  </div>
+  <button class="primary-button" type="button" (click)="abrirModalNovoLancamento()" [disabled]="!bancoContaSelecionada() || carregandoBancosContas()">
+    <span aria-hidden="true">＋</span> Novo lançamento
+  </button>
+</div>
+
+<section class="filters" aria-label="Filtros do painel">
+  <div class="filter-heading"><span class="filter-icon" aria-hidden="true">⌕</span><span>Filtrar por</span></div>
+  <label class="filter-field filter-month">
+    <span>Mês</span>
+    <select [ngModel]="mesSelecionado()" (ngModelChange)="alterarMes(+$event)">
+      @for (mes of meses; track mes; let index = $index) { <option [value]="index + 1">{{ mes }}</option> }
+    </select>
+  </label>
+  <label class="filter-field filter-year">
+    <span>Ano</span>
+    <input type="number" min="1900" max="9999" step="1" [ngModel]="anoSelecionado()" (ngModelChange)="alterarAno(+$event)" />
+  </label>
+  <label class="filter-field">
+    <span>Banco</span>
+    <select [ngModel]="bancoSelecionado()" (ngModelChange)="alterarBanco($event)" [disabled]="carregandoBancosContas() || bancos().length === 0">
+      <option [ngValue]="null" disabled>Selecione um banco</option>
+      @for (banco of bancos(); track banco.id) { <option [ngValue]="banco.id">{{ banco.nome }}</option> }
+    </select>
+  </label>
+  <label class="filter-field">
+    <span>Conta</span>
+    <select [ngModel]="contaSelecionada()" (ngModelChange)="alterarConta($event)" [disabled]="carregandoBancosContas() || contas().length === 0">
+      <option [ngValue]="null" disabled>Selecione uma conta</option>
+      @for (conta of contas(); track conta.id) { <option [ngValue]="conta.id">{{ conta.nome }}</option> }
+    </select>
+  </label>
+  
+</section>
+
+@if (carregandoBancosContas()) {
+  <p class="form-state-message" role="status">Carregando bancos e contas do período...</p>
+} @else if (erroBancosContas()) {
+  <div class="form-state-message form-state-error" role="alert"><span>{{ erroBancosContas() }}</span><button type="button" class="retry-button" (click)="recarregarBancosContas()">Tentar novamente</button></div>
+} @else if (bancosContasDisponiveis().length === 0) {
+  <p class="form-state-message" role="status">Nenhum banco ou conta disponível para o período selecionado.</p>
+}
+
+<dialog #modalNovoLancamento class="movement-dialog" aria-labelledby="modal-titulo" (click)="fecharModalAoClicarFora($event)">
+  <section class="movement-modal">
+    <header class="movement-modal-heading">
+      <div>
+        <p class="eyebrow">MOVIMENTAÇÕES</p>
+        <h2 id="modal-titulo">{{ movimentacaoEditando() ? 'Editar movimentação' : 'Novo lançamento' }}</h2>
+        <p class="subtitle">{{ movimentacaoEditando() ? 'Altere os dados desta movimentação.' : 'Registre uma entrada ou saída na conta selecionada.' }}</p>
+      </div>
+      <button class="modal-close" type="button" aria-label="Fechar" (click)="fecharModalNovoLancamento()">×</button>
+    </header>
+
+    <form #formularioNovoLancamento="ngForm" (ngSubmit)="salvarNovoLancamento()">
+      <div class="modal-account">
+        <div><span>Banco</span><strong>{{ bancoContaSelecionada()?.nomeBanco }}</strong></div>
+        <div><span>Conta</span><strong>{{ bancoContaSelecionada()?.nomeConta }}</strong></div>
+      </div>
+
+      <div class="modal-form-grid">
+        <label class="modal-field modal-full-width">
+          <span>Tipo de movimentação <i>*</i></span>
+          @if (!movimentacaoEditando()) {
+          <div class="type-filter" role="group" aria-label="Filtrar tipos de movimentação">
+            <button type="button" class="type-filter-button" [class.active-filter]="filtroTipoMovimentacao() === 'TODOS'" [attr.aria-pressed]="filtroTipoMovimentacao() === 'TODOS'" (click)="filtrarTiposMovimentacao('TODOS')" [disabled]="carregandoTiposMovimentacao() || !!erroTiposMovimentacao()">Todos</button>
+            <button type="button" class="type-filter-button credit-filter" [class.active-filter]="filtroTipoMovimentacao() === 'CREDITO'" [attr.aria-pressed]="filtroTipoMovimentacao() === 'CREDITO'" (click)="filtrarTiposMovimentacao('CREDITO')" [disabled]="carregandoTiposMovimentacao() || !!erroTiposMovimentacao()">Crédito</button>
+            <button type="button" class="type-filter-button debit-filter" [class.active-filter]="filtroTipoMovimentacao() === 'DEBITO'" [attr.aria-pressed]="filtroTipoMovimentacao() === 'DEBITO'" (click)="filtrarTiposMovimentacao('DEBITO')" [disabled]="carregandoTiposMovimentacao() || !!erroTiposMovimentacao()">Débito</button>
+            <button type="button" class="type-filter-button transfer-filter" [class.active-filter]="filtroTipoMovimentacao() === 'TRANSFERENCIA'" [attr.aria-pressed]="filtroTipoMovimentacao() === 'TRANSFERENCIA'" (click)="filtrarTiposMovimentacao('TRANSFERENCIA')" [disabled]="carregandoTiposMovimentacao() || !!erroTiposMovimentacao()">Transferência</button>
+          </div>
+          }
+          <select
+            class="type-select"
+            name="tipoMovimentacao"
+            [ngModel]="tipoMovimentacaoSelecionadoId()"
+            (ngModelChange)="movimentacaoEditando() ? tipoMovimentacaoSelecionadoId.set($event) : alterarTipoMovimentacao($event)"
+            required
+            aria-label="Tipo de movimentação e categoria"
+            [disabled]="carregandoTiposMovimentacao() || !!erroTiposMovimentacao()"
+          >
+            <option [ngValue]="null" disabled>Selecione um tipo de movimentação</option>
+            @for (tipo of (movimentacaoEditando() ? tiposBasicosMovimentacao() : tiposMovimentacaoFiltrados()); track tipo.id) {
+              <option
+                [ngValue]="tipo.id"
+                [class.credit-option]="tipo.icTipoMovimentacao === 'CREDITO'"
+                [class.debit-option]="tipo.icTipoMovimentacao === 'DEBITO'"
+                [class.transfer-option]="tipo.icTipoMovimentacao === 'RESGATE' || tipo.icTipoMovimentacao === 'APLICACAO' || tipo.icTipoMovimentacao === 'TRANSFERENCIA'"
+              >{{ tipo.dsTipoMovimentacao }} — {{ tipo.dsCategoria }}</option>
+            } @empty {
+              <option disabled>{{ carregandoTiposMovimentacao() ? 'Carregando tipos...' : 'Nenhum tipo disponível' }}</option>
+            }
+          </select>
+        </label>
+        @if (!movimentacaoEditando() && exigeDestinoTransferencia()) {
+          <label class="modal-field modal-full-width">
+            <span>Transferir para</span>
+            <select
+              class="type-select"
+              name="transferirPara"
+              [ngModel]="transferirParaSelecionadoId()"
+              (ngModelChange)="alterarDestinoTransferencia($event)"
+              aria-label="Conta de destino da transferência"
+              [disabled]="carregandoDestinosTransferencia() || !!erroDestinosTransferencia() || destinosTransferencia().length === 0"
+            >
+              <option [ngValue]="null" disabled>Selecione um banco e conta</option>
+              @for (destino of destinosTransferencia(); track destino.bancoContaId) {
+                <option [ngValue]="destino.bancoContaId">{{ destino.nomeBanco }} — {{ destino.nomeConta }}</option>
+              } @empty {
+                <option disabled>{{ carregandoDestinosTransferencia() ? 'Carregando destinos...' : 'Nenhum destino disponível' }}</option>
+              }
+            </select>
+          </label>
+          @if (erroDestinosTransferencia()) {
+            <div class="modal-type-error" role="alert">
+              <span>{{ erroDestinosTransferencia() }}</span>
+              <button type="button" (click)="alterarTipoMovimentacao(tipoMovimentacaoSelecionadoId())">Tentar novamente</button>
+            </div>
+          } @else if (carregandoDestinosTransferencia()) {
+            <p class="modal-type-status" role="status">Carregando bancos e contas para transferência...</p>
+          }
+        }
+        @if (!movimentacaoEditando() && exigeInvestimento()) {
+          <label class="modal-field modal-full-width">
+            <span>Investimento</span>
+            <select
+              class="type-select"
+              name="investimento"
+              [ngModel]="investimentoSelecionadoId()"
+              (ngModelChange)="investimentoSelecionadoId.set($event)"
+              aria-label="Investimento associado"
+              [disabled]="!transferirParaSelecionadoId() || carregandoInvestimentos() || !!erroInvestimentos() || investimentos().length === 0"
+            >
+              <option [ngValue]="null" disabled>
+                {{ !transferirParaSelecionadoId() ? 'Selecione primeiro um destino' : 'Selecione um investimento' }}
+              </option>
+              @for (investimento of investimentos(); track investimento.id) {
+                <option [ngValue]="investimento.id">{{ investimento.dsInvestimento }}</option>
+              } @empty {
+                <option disabled>
+                  {{ carregandoInvestimentos() ? 'Carregando investimentos...' : 'Nenhum investimento disponível' }}
+                </option>
+              }
+            </select>
+          </label>
+          @if (erroInvestimentos()) {
+            <div class="modal-type-error" role="alert">
+              <span>{{ erroInvestimentos() }}</span>
+              <button type="button" (click)="recarregarInvestimentos()">Tentar novamente</button>
+            </div>
+          } @else if (carregandoInvestimentos()) {
+            <p class="modal-type-status" role="status">Carregando investimentos do destino selecionado...</p>
+          }
+        }
+        @if (erroTiposMovimentacao()) {
+          <div class="modal-type-error" role="alert">
+            <span>{{ erroTiposMovimentacao() }}</span>
+            <button type="button" (click)="recarregarTiposMovimentacao()">Tentar novamente</button>
+          </div>
+        } @else if (carregandoTiposMovimentacao()) {
+          <p class="modal-type-status" role="status">Carregando tipos de movimentação...</p>
+        }
+        <label class="modal-field">
+          <span>Data da movimentação <i>*</i></span>
+          <input type="date" name="data" [(ngModel)]="dataNovoLancamento" [attr.min]="movimentacaoEditando() ? dataInicioPeriodo() : null" [attr.max]="movimentacaoEditando() ? dataFimPeriodo() : null" required autofocus />
+        </label>
+        <label class="modal-field">
+          <span>Valor <i>*</i></span>
+          <div class="modal-amount-input"><span>R$</span><input type="number" name="valor" [(ngModel)]="valorNovoLancamento" required min="0.01" step="0.01" placeholder="0,00" /></div>
+        </label>
+        <label class="modal-field modal-full-width">
+          <span>Observação</span>
+          <textarea name="observacao" [(ngModel)]="observacaoNovoLancamento" rows="3" maxlength="255" placeholder="Descreva esta movimentação"></textarea>
+        </label>
+      </div>
+
+      @if (erroSalvamentoNovoLancamento()) {
+        <p class="modal-save-error" role="alert">{{ erroSalvamentoNovoLancamento() }}</p>
+      }
+
+      <footer class="modal-actions">
+        <span><i>*</i> Campos obrigatórios</span>
+        <div>
+          <button class="modal-cancel" type="button" (click)="fecharModalNovoLancamento()" [disabled]="salvandoNovoLancamento()">Cancelar</button>
+          <button class="modal-save" type="submit" [disabled]="formularioNovoLancamento.invalid || (!movimentacaoEditando() && !bancoContaSelecionada()) || !tipoMovimentacaoSelecionado() || carregandoTiposMovimentacao() || salvandoNovoLancamento()">
+            @if (salvandoNovoLancamento()) {
+              Salvando...
+            } @else {
+              <span aria-hidden="true">✓</span> {{ movimentacaoEditando() ? 'Salvar alterações' : 'Salvar lançamento' }}
+            }
+          </button>
+        </div>
+      </footer>
+    </form>
+  </section>
+</dialog>
+
+<dialog #modalConfirmacaoExclusao class="movement-dialog confirmation-dialog" aria-labelledby="confirmacao-exclusao-titulo">
+  <section class="movement-modal">
+    <header class="movement-modal-heading">
+      <div>
+        <p class="eyebrow">CONFIRMAR EXCLUSÃO</p>
+        <h2 id="confirmacao-exclusao-titulo">Excluir movimentação?</h2>
+        <p class="subtitle">Deseja excluir este registro? Esta ação não pode ser desfeita.</p>
+      </div>
+    </header>
+    @if (erroExclusaoMovimentacao()) {
+      <p class="modal-save-error" role="alert">{{ erroExclusaoMovimentacao() }}</p>
+    }
+    <footer class="modal-actions">
+      <span></span>
+      <div>
+        <button class="modal-cancel" type="button" (click)="fecharConfirmacaoExclusao()" [disabled]="excluindoMovimentacao()">Não</button>
+        <button class="modal-save delete-confirm-button" type="button" (click)="confirmarExclusaoMovimentacao()" [disabled]="excluindoMovimentacao()">
+          {{ excluindoMovimentacao() ? 'Excluindo...' : 'Sim, excluir' }}
+        </button>
+      </div>
+    </footer>
+  </section>
+</dialog>
+
+@if (carregandoResumo()) {
+  <p class="form-state-message" role="status">Consultando saldos da conta selecionada...</p>
+} @else if (erroResumo()) {
+  <p class="form-state-message form-state-error" role="alert">{{ erroResumo() }}</p>
+}
+
+<section class="summary-grid" aria-label="Resumo financeiro do período">
+  <article class="summary-card balance-card">
+    <div class="card-top"><span>Saldo inicial</span><span class="card-icon balance-icon" aria-hidden="true">↗</span></div>
+    <strong>{{ resumo()?.vlSaldoInicial | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+    <span class="card-caption">Saldo no início do período</span>
+    <div class="balance-decoration" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  </article>
+  <article class="summary-card">
+    <div class="card-top"><span>Entradas</span><span class="card-icon income-icon" aria-hidden="true">↓</span></div>
+    <strong>{{ resumo()?.vlTotalCredito | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+    <span class="card-caption">Total de créditos no período</span>
+  </article>
+  <article class="summary-card">
+    <div class="card-top"><span>Saídas</span><span class="card-icon expense-icon" aria-hidden="true">↑</span></div>
+    <strong>{{ resumo()?.vlTotalDebito | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+    <span class="card-caption">Total de débitos no período</span>
+  </article>
+  <article class="summary-card">
+    <div class="card-top"><span>Saldo final</span><span class="card-icon income-icon" aria-hidden="true">✓</span></div>
+    <strong>{{ resumo()?.vlSaldoFinal | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+    <span class="card-caption">Saldo no fim do período</span>
+  </article>
+</section>
+
+<section class="transactions">
+  <div class="section-heading">
+    <div><h2>Movimentação</h2><p>Suas movimentações para o período selecionado.</p></div>
+    <a routerLink="/movimentacoes/nova" class="text-link">Ver mais <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>DATA</th><th>TIPO DE MOVIMENTAÇÃO</th><th>CATEGORIA</th><th>BANCO / CONTA</th><th class="amount-cell">VALOR</th><th class="amount-cell">SALDO</th><th>AÇÕES</th></tr></thead>
+      <tbody>
+        @if (carregandoMovimentacoes()) {
+          <tr><td class="empty-state" colspan="7"><strong>Consultando movimentações...</strong></td></tr>
+        } @else if (erroMovimentacoes()) {
+          <tr><td class="empty-state" colspan="7"><strong>Não foi possível carregar as movimentações</strong><span>{{ erroMovimentacoes() }}</span><button class="primary-button" type="button" (click)="recarregarMovimentacoes()">Tentar novamente</button></td></tr>
+        } @else {
+          @for (movimentacao of movimentacoesFiltradas(); track movimentacao.identificador) {
+          <tr>
+            <td class="date-cell">{{ movimentacao.data | date:'dd MMM, yyyy':'':'pt-BR' }}</td>
+            <td><div class="movement-name"><span class="movement-indicator" [class.income-indicator]="movimentacao.tipo === 'entrada'" [class.expense-indicator]="movimentacao.tipo === 'saida'">{{ movimentacao.tipo === 'entrada' ? '↓' : '↑' }}</span><strong>{{ movimentacao.tipoMovimentacao || (movimentacao.tipo === 'entrada' ? 'Entrada' : 'Saída') }}</strong></div></td>
+            <td><span class="category-pill">{{ movimentacao.categoria }}</span></td>
+            <td><div class="bank-account"><strong>{{ movimentacao.banco }}</strong><span>{{ movimentacao.conta }}</span></div></td>
+            <td class="amount-cell" [class.income-amount]="movimentacao.tipo === 'entrada'" [class.expense-amount]="movimentacao.tipo === 'saida'">{{ movimentacao.tipo === 'entrada' ? '+' : '−' }}{{ movimentacao.valor | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+            <td class="amount-cell balance-cell">
+              @if (movimentacao.saldo !== null && movimentacao.saldo !== undefined) {
+                {{ movimentacao.saldo | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+              } @else {
+                <span aria-label="Saldo indisponível">—</span>
+              }
+            </td>
+            <td class="actions-cell">
+              <div class="movement-actions">
+                <button type="button" class="row-action-button edit-row-button" [disabled]="movimentacao.vinculada || salvandoNovoLancamento() || excluindoMovimentacao()" [attr.title]="movimentacao.vinculada ? 'Transferências vinculadas não podem ser alteradas.' : 'Editar movimentação'" [attr.aria-label]="'Editar movimentação de ' + movimentacao.tipoMovimentacao" (click)="abrirEdicaoMovimentacao(movimentacao.identificador)">Editar</button>
+                <button type="button" class="row-action-button delete-row-button" [disabled]="movimentacao.vinculada || salvandoNovoLancamento() || excluindoMovimentacao()" [attr.title]="movimentacao.vinculada ? 'Transferências vinculadas não podem ser excluídas.' : 'Excluir movimentação'" [attr.aria-label]="'Excluir movimentação de ' + movimentacao.tipoMovimentacao" (click)="abrirConfirmacaoExclusao(movimentacao.identificador)">Excluir</button>
+                @if (movimentacao.vinculada) {
+                  <small>Transferência vinculada: edição e exclusão bloqueadas.</small>
+                }
+              </div>
+            </td>
+          </tr>
+          } @empty {
+            <tr><td class="empty-state" colspan="7"><span class="empty-icon">⌕</span><strong>Nenhuma movimentação encontrada</strong><span>Altere os filtros ou registre um novo lançamento.</span><a routerLink="/movimentacoes/nova">Criar lançamento</a></td></tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

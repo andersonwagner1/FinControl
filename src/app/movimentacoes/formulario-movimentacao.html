@@ -1,0 +1,46 @@
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">MOVIMENTAÇÕES</p>
+    <h1>Novo lançamento</h1>
+    <p class="subtitle">Registre uma entrada ou saída para manter suas finanças em dia.</p>
+  </div>
+  <a class="back-link" routerLink="/"><span aria-hidden="true">←</span> Voltar ao dashboard</a>
+</div>
+
+<div class="form-layout">
+  <section class="form-card">
+    <div class="form-card-heading"><span class="heading-icon" aria-hidden="true">＋</span><div><h2>Detalhes da movimentação</h2><p>Preencha as informações do lançamento.</p></div></div>
+    <form #formularioMovimentacao="ngForm" (ngSubmit)="salvar()">
+      <fieldset class="type-field">
+        <legend>Tipo de movimentação</legend>
+        <div class="type-options">
+          <button type="button" class="type-option" [class.selected-expense]="tipo === 'saida'" [attr.aria-pressed]="tipo === 'saida'" (click)="tipo = 'saida'"><span class="type-option-icon expense-type-icon" aria-hidden="true">↗</span><span><strong>Saída</strong><small>Uma despesa ou pagamento</small></span><span class="radio-dot"></span></button>
+          <button type="button" class="type-option" [class.selected-income]="tipo === 'entrada'" [attr.aria-pressed]="tipo === 'entrada'" (click)="tipo = 'entrada'"><span class="type-option-icon income-type-icon" aria-hidden="true">↙</span><span><strong>Entrada</strong><small>Um recebimento ou renda</small></span><span class="radio-dot"></span></button>
+        </div>
+      </fieldset>
+
+      <div class="form-grid">
+        <label class="form-field full-width"><span>Descrição <i>*</i></span><input name="descricao" [(ngModel)]="descricao" required maxlength="80" placeholder="Ex.: Conta de energia, salário..." /><small>Uma descrição simples para identificar o lançamento.</small></label>
+        <label class="form-field"><span>Valor <i>*</i></span><div class="amount-input"><span>R$</span><input name="valor" type="number" [(ngModel)]="valor" required min="0.01" step="0.01" placeholder="0,00" /></div></label>
+        <label class="form-field"><span>Categoria <i>*</i></span><select name="categoria" [(ngModel)]="categoria" required>@for (item of categorias; track item) { <option [value]="item">{{ item }}</option> }</select></label>
+        <label class="form-field"><span>Mês <i>*</i></span><select name="mes" [ngModel]="mesSelecionado()" (ngModelChange)="alterarMes(+$event)" required>@for (mes of meses; track mes.numero) { <option [ngValue]="mes.numero">{{ mes.nome }}</option> }</select></label>
+        <label class="form-field"><span>Ano <i>*</i></span><input name="ano" type="number" min="1900" max="9999" step="1" [ngModel]="anoSelecionado()" (ngModelChange)="alterarAno(+$event)" required /></label>
+        <label class="form-field"><span>Data da movimentação <i>*</i></span><input name="data" type="date" [ngModel]="data" (ngModelChange)="alterarData($event)" required /></label>
+        <label class="form-field"><span>Banco <i>*</i></span><select name="banco" [ngModel]="bancoSelecionado()" (ngModelChange)="alterarBanco($event)" required [disabled]="carregandoBancosContas() || bancosDisponiveis().length === 0"><option [ngValue]="null">Selecione um banco</option>@for (bancoDisponivel of bancosDisponiveis(); track bancoDisponivel.id) { <option [ngValue]="bancoDisponivel.id">{{ bancoDisponivel.nome }}</option> }</select></label>
+        <label class="form-field full-width"><span>Conta <i>*</i></span><select name="conta" [ngModel]="contaSelecionada()" (ngModelChange)="contaSelecionada.set($event)" required [disabled]="carregandoBancosContas() || !bancoSelecionado() || contasDisponiveis().length === 0"><option [ngValue]="null">Selecione uma conta</option>@for (bancoConta of contasDisponiveis(); track bancoConta.bancoContaId) { <option [ngValue]="bancoConta.bancoContaId">{{ bancoConta.nomeConta }}</option> }</select></label>
+      </div>
+
+      @if (carregandoBancosContas()) {
+        <p class="form-state-message" role="status">Carregando bancos e contas para o período selecionado...</p>
+      } @else if (erroBancosContas()) {
+        <div class="form-state-message form-state-error" role="alert"><span>{{ erroBancosContas() }}</span><button type="button" class="retry-button" (click)="recarregarBancosContas()">Tentar novamente</button></div>
+      } @else if (bancosDisponiveis().length === 0) {
+        <p class="form-state-message" role="status">Nenhum banco ou conta disponível para o mês e ano da movimentação.</p>
+      }
+
+      <div class="form-footer"><span><i>*</i> Campos obrigatórios</span><div class="form-actions"><a class="cancel-button" routerLink="/">Cancelar</a><button class="save-button" type="submit" [disabled]="formularioMovimentacao.invalid || carregandoBancosContas() || bancosContasDisponiveis().length === 0 || !contaSelecionada() || !valor || valor <= 0"><span aria-hidden="true">✓</span> Salvar lançamento</button></div></div>
+    </form>
+  </section>
+
+  <aside class="tip-card"><div class="tip-icon" aria-hidden="true">✦</div><h3>Dica financeira</h3><p>Manter seus lançamentos atualizados ajuda você a entender para onde seu dinheiro está indo.</p><div class="tip-divider"></div><div class="tip-note"><span aria-hidden="true">✓</span> Seus dados ficam salvos neste dispositivo.</div></aside>
+</div>

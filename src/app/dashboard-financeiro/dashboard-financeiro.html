@@ -1,0 +1,250 @@
+<main class="finance-dashboard" [class.dark-theme]="temaEscuro()">
+  <header class="dashboard-header">
+    <div>
+      <p class="eyebrow">FINORA · VISÃO EXECUTIVA</p>
+      <h1>Dashboard financeiro</h1>
+      <p class="dashboard-subtitle">Acompanhe seu fluxo de caixa, despesas e investimentos.</p>
+    </div>
+    <div class="header-actions">
+      <button class="icon-button theme-button" type="button" (click)="alternarTema()" [attr.aria-label]="temaEscuro() ? 'Ativar tema claro' : 'Ativar tema escuro'">
+        <span aria-hidden="true">{{ temaEscuro() ? '☀' : '◐' }}</span>
+        {{ temaEscuro() ? 'Tema claro' : 'Tema escuro' }}
+      </button>
+      <button class="icon-button refresh-button" type="button" (click)="carregar()" [disabled]="carregando()" aria-label="Atualizar dados">
+        <span aria-hidden="true">↻</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="filter-panel" aria-label="Filtros do dashboard">
+    <div class="filter-panel-heading">
+      <div class="filter-title"><span class="filter-symbol" aria-hidden="true">☷</span><strong>Filtros</strong></div>
+      <button class="clear-filters" type="button" (click)="limparFiltros()">Limpar filtros</button>
+    </div>
+    <div class="filter-grid">
+      <fieldset class="period-filter">
+        <legend>Período</legend>
+        <div class="segmented-control" role="group" aria-label="Modo de filtro do período">
+          <button type="button" [class.selected]="modoPeriodo() === 'mes'" [attr.aria-pressed]="modoPeriodo() === 'mes'" (click)="alterarModoPeriodo('mes')">Mês / ano</button>
+          <button type="button" [class.selected]="modoPeriodo() === 'intervalo'" [attr.aria-pressed]="modoPeriodo() === 'intervalo'" (click)="alterarModoPeriodo('intervalo')">Intervalo</button>
+        </div>
+      </fieldset>
+      @if (modoPeriodo() === 'mes') {
+        <label class="filter-field">
+          <span>Mês</span>
+          <select [ngModel]="mes()" (ngModelChange)="mes.set(+$event); atualizarFiltro()">
+            @for (nomeMes of meses; track nomeMes; let index = $index) {
+              <option [value]="index + 1">{{ nomeMes }}</option>
+            }
+          </select>
+        </label>
+        <label class="filter-field">
+          <span>Ano</span>
+          <input type="number" min="1900" max="9999" [ngModel]="ano()" (ngModelChange)="ano.set(+$event); atualizarFiltro()" />
+        </label>
+      } @else {
+        <label class="filter-field">
+          <span>Data inicial</span>
+          <input type="date" [ngModel]="dataInicio()" (ngModelChange)="alterarDataInicio($event)" />
+        </label>
+        <label class="filter-field">
+          <span>Data final</span>
+          <input type="date" [ngModel]="dataFim()" (ngModelChange)="alterarDataFim($event)" />
+        </label>
+      }
+      <label class="filter-field">
+        <span>Banco / conta</span>
+        <select [ngModel]="conta()" (ngModelChange)="conta.set($event); atualizarFiltro()">
+          <option value="">Todas as contas</option>
+          @for (item of contas(); track item) { <option [value]="item">{{ item }}</option> }
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Categoria</span>
+        <select [ngModel]="categoria()" (ngModelChange)="categoria.set($event); atualizarFiltro()">
+          <option value="">Todas as categorias</option>
+          @for (item of categorias(); track item) { <option [value]="item">{{ item }}</option> }
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Tipo de relatório</span>
+        <select [ngModel]="relatorio()" (ngModelChange)="relatorio.set($event); atualizarFiltro()">
+          <option value="">Todos os tipos</option>
+          @for (item of relatorios(); track item) { <option [value]="item">{{ item }}</option> }
+        </select>
+      </label>
+    </div>
+  </section>
+
+  @if (carregando()) {
+    <div class="state-card" role="status"><span class="loader" aria-hidden="true"></span> Carregando dados financeiros...</div>
+  } @else if (erro()) {
+    <div class="state-card error-state" role="alert">
+      <div><strong>Não foi possível carregar o dashboard.</strong><span>{{ erro() }}</span></div>
+      <button class="primary-button" type="button" (click)="carregar()">Tentar novamente</button>
+    </div>
+  } @else {
+    <section class="kpi-grid" aria-label="Indicadores financeiros">
+      <article class="kpi-card">
+        <div class="kpi-heading"><span>Total de entradas</span><span class="kpi-icon green" aria-hidden="true">↙</span></div>
+        <strong>{{ indicadores().totalEntradas | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+        <span class="kpi-caption">Créditos e resgates no período</span>
+        <span class="kpi-accent green-accent"></span>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-heading"><span>Total de saídas</span><span class="kpi-icon red" aria-hidden="true">↗</span></div>
+        <strong>{{ indicadores().totalSaidas | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+        <span class="kpi-caption">Débitos e aplicações no período</span>
+        <span class="kpi-accent red-accent"></span>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-heading"><span>Saldo líquido</span><span class="kpi-icon blue" aria-hidden="true">∑</span></div>
+        <strong [class.positive]="indicadores().saldoLiquido >= 0" [class.negative]="indicadores().saldoLiquido < 0">{{ indicadores().saldoLiquido | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+        <span class="kpi-caption">Entradas menos saídas</span>
+        <span class="kpi-accent blue-accent"></span>
+      </article>
+      <article class="kpi-card">
+        <div class="kpi-heading"><span>Total investido</span><span class="kpi-icon purple" aria-hidden="true">◈</span></div>
+        <strong>{{ indicadores().totalInvestido | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+        <span class="kpi-caption">Aportes e aplicações</span>
+        <span class="kpi-accent purple-accent"></span>
+      </article>
+    </section>
+
+    <section class="chart-grid" aria-label="Gráficos financeiros">
+      <article class="panel flow-panel">
+        <header class="panel-heading">
+          <div><h2>Fluxo de caixa</h2><p>Entradas e saídas · {{ periodoLegenda() }}</p></div>
+          <div class="chart-legend"><span><i class="legend-dot income-dot"></i>Entradas</span><span><i class="legend-dot expense-dot"></i>Saídas</span></div>
+        </header>
+        @if (pontosFluxo().length > 0) {
+          <div class="flow-chart">
+            <svg viewBox="0 0 740 220" role="img" [attr.aria-label]="'Gráfico de linha de entradas e saídas para ' + periodoLegenda()">
+              <defs>
+                <linearGradient id="income-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#20a17e" stop-opacity=".2" /><stop offset="100%" stop-color="#20a17e" stop-opacity="0" /></linearGradient>
+                <linearGradient id="expense-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#e87962" stop-opacity=".14" /><stop offset="100%" stop-color="#e87962" stop-opacity="0" /></linearGradient>
+              </defs>
+              <path class="grid-line" d="M30 30H710 M30 70H710 M30 110H710 M30 150H710 M30 200H710" />
+              <path [attr.d]="areaEntradas()" fill="url(#income-area)" />
+              <path [attr.d]="areaSaidas()" fill="url(#expense-area)" />
+              <path [attr.d]="caminhoEntradas()" class="flow-line income-line" />
+              <path [attr.d]="caminhoSaidas()" class="flow-line expense-line" />
+              @for (ponto of pontosFluxo(); track ponto.periodo; let index = $index; let last = $last) {
+                <circle [attr.cx]="ponto.x" [attr.cy]="ponto.yEntradas" r="3" class="flow-point income-point" />
+                <circle [attr.cx]="ponto.x" [attr.cy]="ponto.ySaidas" r="3" class="flow-point expense-point" />
+                @if (index === 0 || last || (modoPeriodo() === 'mes' && index % 5 === 0) || (modoPeriodo() === 'intervalo' && index % 2 === 0)) {
+                  <text [attr.x]="ponto.x" y="216" class="axis-label" text-anchor="middle">{{ ponto.periodo }}</text>
+                }
+              }
+            </svg>
+          </div>
+        } @else { <p class="chart-empty">Sem movimentações neste período.</p> }
+      </article>
+
+      <article class="panel category-panel">
+        <header class="panel-heading"><div><h2>Despesas por categoria</h2><p>Distribuição dos débitos</p></div></header>
+        @if (segmentosRosca().length > 0) {
+          <div class="donut-content">
+            <div class="donut-wrap">
+              <svg viewBox="0 0 120 120" role="img" aria-label="Gráfico de rosca das despesas por categoria">
+                <circle class="donut-track" cx="60" cy="60" r="40" />
+                @for (segmento of segmentosRosca(); track segmento.nome) {
+                  <circle class="donut-segment" cx="60" cy="60" r="40" fill="none" [attr.stroke]="segmento.cor" [attr.stroke-dasharray]="segmento.dashArray" [attr.stroke-dashoffset]="segmento.offset" />
+                }
+              </svg>
+              <div class="donut-total"><strong>{{ totalCategorias() | currency:'BRL':'symbol':'1.0-0':'pt-BR' }}</strong><span>Total de gastos</span></div>
+            </div>
+            <div class="category-legend">
+              @for (segmento of segmentosRosca(); track segmento.nome) {
+                <div class="category-legend-row"><i [attr.style]="'--legend-color:' + segmento.cor"></i><span>{{ segmento.nome }}</span><strong>{{ (segmento.valor / totalCategorias() * 100) | number:'1.0-0' }}%</strong></div>
+              }
+            </div>
+          </div>
+        } @else { <p class="chart-empty">Sem despesas categorizadas neste período.</p> }
+      </article>
+
+      <article class="panel investments-panel">
+        <header class="panel-heading"><div><h2>Investimentos &amp; resgates</h2><p>Comparativo por investimento</p></div><div class="chart-legend"><span><i class="legend-dot income-dot"></i>Aportes</span><span><i class="legend-dot expense-dot"></i>Resgates</span></div></header>
+        @if (dadosInvestimentos().length > 0) {
+          <div class="bar-chart">
+            @for (item of dadosInvestimentos(); track item.nome) {
+              <div class="bar-row">
+                <span class="bar-label" [title]="item.nome">{{ item.nome }}</span>
+                <div class="bar-track" [attr.aria-label]="item.nome + ': aportes ' + item.valor + ', resgates ' + (item.secundario ?? 0)">
+                  <span class="bar-fill investment-fill" [style.width.%]="largura(item.valor, maxInvestimento())"></span>
+                  <span class="bar-fill redemption-fill" [style.width.%]="largura(item.secundario ?? 0, maxInvestimento())"></span>
+                </div>
+                <span class="bar-value">{{ (item.valor + (item.secundario ?? 0)) | currency:'BRL':'symbol':'1.0-0':'pt-BR' }}</span>
+              </div>
+            }
+          </div>
+        } @else { <p class="chart-empty">Sem movimentações de investimento no período.</p> }
+      </article>
+
+      <article class="panel income-panel">
+        <header class="panel-heading"><div><h2>Origem das rendas</h2><p>Principais fontes de crédito</p></div></header>
+        @if (origensRenda().length > 0) {
+          <div class="bar-chart">
+            @for (item of origensRenda(); track item.nome) {
+              <div class="bar-row income-bar-row">
+                <span class="bar-label" [title]="item.nome">{{ item.nome }}</span>
+                <div class="bar-track"><span class="bar-fill income-fill" [style.width.%]="largura(item.valor, maxRenda())"></span></div>
+                <span class="bar-value">{{ item.valor | currency:'BRL':'symbol':'1.0-0':'pt-BR' }}</span>
+              </div>
+            }
+          </div>
+        } @else { <p class="chart-empty">Sem créditos neste período.</p> }
+      </article>
+    </section>
+
+    <app-sankey-financeiro
+      class="sankey-dashboard-panel"
+      [movimentacoes]="movimentosSankey()"
+      [linhasMensais]="linhasTabelaMensal()"
+      [saldoAnterior]="saldoAnteriorSankey()"
+      [temaEscuro]="temaEscuro()"
+    />
+
+    <section class="panel table-panel">
+      <header class="panel-heading table-heading">
+        <div><h2>Movimentações</h2><p>{{ linhasFiltradas().length }} registros · {{ periodoLegenda() }}</p></div>
+        <label class="page-size"><span>Linhas</span><select [ngModel]="tamanhoPagina" disabled aria-label="Registros por página"><option>10</option></select></label>
+      </header>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th><button (click)="ordenarPor('dtMovimentacao')">Data <span>{{ etiquetaOrdenacao('dtMovimentacao') }}</span></button></th>
+            <th><button (click)="ordenarPor('dsObservacao')">Descrição <span>{{ etiquetaOrdenacao('dsObservacao') }}</span></button></th>
+            <th><button (click)="ordenarPor('dsCategoria')">Categoria <span>{{ etiquetaOrdenacao('dsCategoria') }}</span></button></th>
+            <th><button (click)="ordenarPor('bancoConta')">Banco / conta <span>{{ etiquetaOrdenacao('bancoConta') }}</span></button></th>
+            <th><button (click)="ordenarPor('dsTipoMovimentacao')">Tipo <span>{{ etiquetaOrdenacao('dsTipoMovimentacao') }}</span></button></th>
+            <th class="number-cell"><button (click)="ordenarPor('vlCredito')">Crédito <span>{{ etiquetaOrdenacao('vlCredito') }}</span></button></th>
+            <th class="number-cell"><button (click)="ordenarPor('vlDebito')">Débito <span>{{ etiquetaOrdenacao('vlDebito') }}</span></button></th>
+          </tr></thead>
+          <tbody>
+            @for (linha of linhasPagina(); track trackLinha($index, linha)) {
+              <tr>
+                <td class="date-cell">{{ linha.dtMovimentacao ? (linha.dtMovimentacao | date:'dd MMM yyyy':'':'pt-BR') : '—' }}</td>
+                <td class="description-cell">{{ linha.dsObservacao || 'Movimentação sem descrição' }}</td>
+                <td><span class="category-tag">{{ linha.dsCategoria }}</span></td>
+                <td>{{ linha.bancoConta }}</td>
+                <td>{{ linha.dsTipoMovimentacao }}</td>
+                <td class="number-cell credit-cell">{{ linha.vlCredito > 0 ? (linha.vlCredito | currency:'BRL':'symbol':'1.2-2':'pt-BR') : '—' }}</td>
+                <td class="number-cell debit-cell">{{ linha.vlDebito > 0 ? (linha.vlDebito | currency:'BRL':'symbol':'1.2-2':'pt-BR') : '—' }}</td>
+              </tr>
+            } @empty {
+              <tr><td class="table-empty" colspan="7">Nenhuma movimentação corresponde aos filtros selecionados.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer class="pagination">
+        <span>Página {{ pagina() }} de {{ totalPaginas() }}</span>
+        <div>
+          <button type="button" (click)="irParaPagina(pagina() - 1)" [disabled]="pagina() <= 1" aria-label="Página anterior">‹</button>
+          <button type="button" (click)="irParaPagina(pagina() + 1)" [disabled]="pagina() >= totalPaginas()" aria-label="Próxima página">›</button>
+        </div>
+      </footer>
+    </section>
+  }
+</main>
