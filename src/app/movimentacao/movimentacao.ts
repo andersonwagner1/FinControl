@@ -38,6 +38,7 @@ export class ComponentePainel implements OnInit, OnDestroy {
   private requisicaoTiposMovimentacao?: Subscription;
   private requisicaoLancamento?: Subscription;
   private requisicaoAtualizacao?: Subscription;
+  private requisicaoAtualizacaoSaldo?: Subscription;
   private requisicaoExclusao?: Subscription;
   private requisicaoDestinosTransferencia?: Subscription;
   private requisicaoInvestimentos?: Subscription;
@@ -65,6 +66,8 @@ export class ComponentePainel implements OnInit, OnDestroy {
   protected readonly erroTiposMovimentacao = signal<string | null>(null);
   protected readonly salvandoNovoLancamento = signal(false);
   protected readonly erroSalvamentoNovoLancamento = signal<string | null>(null);
+  protected readonly atualizandoSaldo = signal(false);
+  protected readonly erroAtualizacaoSaldo = signal<string | null>(null);
   protected readonly excluindoMovimentacao = signal(false);
   protected readonly erroExclusaoMovimentacao = signal<string | null>(null);
   protected readonly destinosTransferencia = signal<BancoContaDisponivel[]>([]);
@@ -143,10 +146,15 @@ export class ComponentePainel implements OnInit, OnDestroy {
     return this.movimentacoesConsulta().map((movimentacao) => {
       const bancoConta = bancosContas.get(movimentacao.bancoContaId);
       const tipoMovimentacao = tipos.get(movimentacao.tipoMovimentacaoId);
-      const entrada = tipoMovimentacao
+       const entrada = (movimentacao.vlCredito ?? 0) > 0; //registra true ou false
+       // ? tipoMovimentacao.icTipoMovimentacao === 'CREDITO' || tipoMovimentacao.icTipoMovimentacao === 'RESGATE'
+       //: (movimentacao.vlDebito ?? 0) < (movimentacao.vlCredito ?? 0);
+      
+      
+      /*const entrada = tipoMovimentacao
         ? tipoMovimentacao.icTipoMovimentacao === 'CREDITO' || tipoMovimentacao.icTipoMovimentacao === 'RESGATE'
         : (movimentacao.vlDebito ?? 0) < (movimentacao.vlCredito ?? 0);
-
+*/
       return {
         identificador: movimentacao.id,
         data: movimentacao.dtMovimentacao,
@@ -155,7 +163,8 @@ export class ComponentePainel implements OnInit, OnDestroy {
         categoria: tipoMovimentacao?.dsCategoria ?? 'Outros',
         banco: bancoConta?.nomeBanco ?? '—',
         conta: bancoConta?.nomeConta ?? '—',
-        valor: Math.max(movimentacao.vlCredito ?? 0, movimentacao.vlDebito ?? 0),
+        valor: movimentacao.vlDebito==0 ? (movimentacao.vlCredito ?? 0) : -(movimentacao.vlDebito ?? 0),
+        //valor: movimentacao.vlCredito ?? 0 > movimentacao.vlCredito : movimentacao.vlDebito, //Math.max(movimentacao.vlCredito ?? 0, movimentacao.vlDebito ?? 0),
         saldo: movimentacao.vlSaldo,
         vinculada: movimentacao.vinculadoId !== null,
       };
@@ -174,6 +183,7 @@ export class ComponentePainel implements OnInit, OnDestroy {
     this.requisicaoTiposMovimentacao?.unsubscribe();
     this.requisicaoLancamento?.unsubscribe();
     this.requisicaoAtualizacao?.unsubscribe();
+    this.requisicaoAtualizacaoSaldo?.unsubscribe();
     this.requisicaoExclusao?.unsubscribe();
     this.requisicaoDestinosTransferencia?.unsubscribe();
     this.requisicaoInvestimentos?.unsubscribe();
@@ -184,6 +194,29 @@ export class ComponentePainel implements OnInit, OnDestroy {
       return;
     }
     this.mesSelecionado.set(mes);
+    this.carregarBancosContas();
+  }
+
+  protected navegarMes(direcao: -1 | 1): void {
+    let mes = this.mesSelecionado() + direcao;
+    let ano = this.anoSelecionado();
+
+    if (mes < 1) {
+      if (ano <= 1900) {
+        return;
+      }
+      mes = 12;
+      ano--;
+    } else if (mes > 12) {
+      if (ano >= 9999) {
+        return;
+      }
+      mes = 1;
+      ano++;
+    }
+
+    this.mesSelecionado.set(mes);
+    this.anoSelecionado.set(ano);
     this.carregarBancosContas();
   }
 
@@ -355,6 +388,31 @@ export class ComponentePainel implements OnInit, OnDestroy {
     }
   }
 
+  protected atualizarSaldo(): void {
+    const bancoContaId = this.bancoContaSelecionada()?.bancoContaId;
+    if (bancoContaId === undefined || this.atualizandoSaldo()) {
+      return;
+    }
+
+    this.requisicaoAtualizacaoSaldo?.unsubscribe();
+    this.atualizandoSaldo.set(true);
+    this.erroAtualizacaoSaldo.set(null);
+    this.requisicaoAtualizacaoSaldo = this.servicoMovimentacoes
+      .atualizarSaldo(this.mesSelecionado(), this.anoSelecionado(), bancoContaId)
+      .subscribe({
+        next: () => {
+          this.atualizandoSaldo.set(false);
+          this.consultarResumo();
+          this.consultarMovimentacoes();
+        },
+        error: (erro: unknown) => {
+          console.error('Erro ao atualizar saldo:', erro);
+          this.erroAtualizacaoSaldo.set(erro instanceof Error ? erro.message : 'Erro ao atualizar saldo.');
+          this.atualizandoSaldo.set(false);
+        },
+      });
+  }
+
   protected fecharModalNovoLancamento(): void {
     this.modalNovoLancamento().nativeElement.close();
     this.movimentacaoEditando.set(null);
@@ -397,7 +455,7 @@ export class ComponentePainel implements OnInit, OnDestroy {
     this.requisicaoLancamento = this.servicoLancamentosMovimentacao.lancar(lancamento).subscribe({
       next: () => {
         this.salvandoNovoLancamento.set(false);
-        this.fecharModalNovoLancamento();
+        //this.fecharModalNovoLancamento();
         this.consultarResumo();
         this.consultarMovimentacoes();
       },
@@ -447,15 +505,16 @@ export class ComponentePainel implements OnInit, OnDestroy {
     this.resumo.set(null);
     this.erroResumo.set(null);
     this.carregandoResumo.set(false);
-    this.bancoSelecionado.set(null);
-    this.contaSelecionada.set(null);
 
     this.requisicaoBancosContas = this.servicoBancosContas.listarDisponiveis(mes, ano).subscribe({
       next: (bancosContas) => {
         this.bancosContasDisponiveis.set(bancosContas);
         this.carregandoBancosContas.set(false);
-        this.bancoSelecionado.set(this.bancos()[0]?.id ?? null);
-        this.contaSelecionada.set(this.contas()[0]?.id ?? null);
+        const bancoContaSelecionada = bancosContas.find((bancoConta) =>
+          bancoConta.bancoId === this.bancoSelecionado()
+          && bancoConta.contaId === this.contaSelecionada()) ?? bancosContas[0] ?? null;
+        this.bancoSelecionado.set(bancoContaSelecionada?.bancoId ?? null);
+        this.contaSelecionada.set(bancoContaSelecionada?.contaId ?? null);
         this.consultarResumo();
         this.consultarMovimentacoes();
       },

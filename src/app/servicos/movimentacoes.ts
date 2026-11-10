@@ -70,6 +70,20 @@ export class ServicoMovimentacoes {
       );
   }
 
+  atualizarSaldo(mes: number, ano: number, bancoContaId: number): Observable<void> {
+    const dados = { mes, ano, bancoContaId, saldo: 0 };
+    return this.http
+      .post<RetornoApi<unknown>>(`${this.enderecoApi}/movimentacoes/atualizacaoSaldo`, dados)
+      .pipe(
+        map((resposta) => {
+          if (!resposta.sucesso) {
+            throw new Error(resposta.mensagem || 'A API não confirmou a atualização do saldo.');
+          }
+        }),
+        catchError((erro: unknown) => this.tratarErroHttp(erro)),
+      );
+  }
+
   atualizar(id: number, movimentacao: MovimentacaoConsulta): Observable<MovimentacaoConsulta> {
     return this.http
       .put<RetornoApi<MovimentacaoConsulta>>(`${this.enderecoApi}/movimentacoes/${id}`, movimentacao)

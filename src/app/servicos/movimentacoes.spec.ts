@@ -86,6 +86,25 @@ describe('ServicoMovimentacoes', () => {
     expect(respostaRecebida).toBe(true);
   });
 
+  it('atualiza o saldo zerado para mês, ano e banco-conta informados', () => {
+    let respostaRecebida = false;
+
+    servico.atualizarSaldo(11, 2026, 7).subscribe(() => {
+      respostaRecebida = true;
+    });
+
+    const requisicao = controladorHttp.expectOne('http://localhost:8080/api/movimentacoes/atualizacaoSaldo');
+    expect(requisicao.request.method).toBe('POST');
+    expect(requisicao.request.body).toEqual({
+      mes: 11,
+      ano: 2026,
+      bancoContaId: 7,
+      saldo: 0,
+    });
+    requisicao.flush({ sucesso: true, mensagem: 'Saldo atualizado', valor: null });
+    expect(respostaRecebida).toBe(true);
+  });
+
   it('exclui uma movimentação pelo ID', () => {
     let respostaRecebida = false;
 
