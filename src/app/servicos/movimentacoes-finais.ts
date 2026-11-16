@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import { RetornoApi } from '../modelos/banco-conta-disponivel';
-import { ResumoMovimentacaoFinal } from '../modelos/resumo-movimentacao-final';
+import { MovimentacaoFinalMensal, ResumoMovimentacaoFinal } from '../modelos/resumo-movimentacao-final';
 
 @Injectable({ providedIn: 'root' })
 export class ServicoMovimentacoesFinais {
@@ -35,5 +35,29 @@ export class ServicoMovimentacoesFinais {
           return throwError(() => erro);
         }),
       );
+  }
+
+  listar(ano: number, bancoId: number, contaId: number): Observable<MovimentacaoFinalMensal[]> {
+    const parametros = new HttpParams()
+      .set('ano', ano)
+      .set('bancoId', bancoId)
+      .set('contaId', contaId);
+    return this.http.get<RetornoApi<MovimentacaoFinalMensal[]> | MovimentacaoFinalMensal[]>(`${this.enderecoApi}/movimentacoes-finais/consulta/ano`, { params: parametros }).pipe(
+      map((resposta) => {
+        const valor = this.ehRetornoApi(resposta) ? resposta.valor : resposta;
+        if (!Array.isArray(valor) || (this.ehRetornoApi(resposta) && !resposta.sucesso)) throw new Error('A API retornou uma lista inválida de movimentações finais.');
+        return valor;
+      }),
+      catchError((erro: unknown) => this.tratarErro(erro)),
+    );
+  }
+
+  private ehRetornoApi(resposta: RetornoApi<unknown> | unknown): resposta is RetornoApi<unknown> {
+    return typeof resposta === 'object' && resposta !== null && 'sucesso' in resposta && 'valor' in resposta;
+  }
+
+  private tratarErro(erro: unknown): Observable<never> {
+    if (erro instanceof HttpErrorResponse && erro.status === 0) return throwError(() => new Error('Não foi possível conectar à API. Verifique se o servidor está em execução.'));
+    return throwError(() => erro);
   }
 }

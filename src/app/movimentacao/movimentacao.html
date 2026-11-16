@@ -6,6 +6,7 @@
   </div>
 
 
+  <a class="text-link" routerLink="/competencias">Competências <span>→</span></a>
   <button class="primary-button" type="button" (click)="abrirModalNovoLancamento()" [disabled]="!bancoContaSelecionada() || carregandoBancosContas()">
     <span aria-hidden="true">＋</span> Novo lançamento
   </button>
@@ -293,8 +294,16 @@
           @for (movimentacao of movimentacoesFiltradas(); track movimentacao.identificador) {
           <tr>
             <td class="date-cell">{{ movimentacao.data | date:'dd MMM, yyyy':'':'pt-BR' }}</td>
-            <td><div class="movement-name"><span class="movement-indicator" [class.income-indicator]="movimentacao.tipo === 'entrada'" [class.expense-indicator]="movimentacao.tipo === 'saida'">{{ movimentacao.tipo === 'saida' ? '↓' : '↑' }}</span><strong>{{ movimentacao.identificador}} - {{ movimentacao.tipoMovimentacao || (movimentacao.tipo === 'entrada' ? 'Entrada' : 'Saída') }}</strong></div></td>
-            <td><span class="category-pill">{{ movimentacao.categoria }}</span></td>
+            <td>
+              <div class="movement-name"><span class="movement-indicator" [class.income-indicator]="movimentacao.tipo === 'entrada'" [class.expense-indicator]="movimentacao.tipo === 'saida'">{{ movimentacao.tipo === 'saida' ? '↓' : '↑' }}</span>
+                <strong>{{ movimentacao.identificador}} - {{ movimentacao.tipoMovimentacao || (movimentacao.tipo === 'entrada' ? 'Entrada' : 'Saída') }}</strong>
+              </div>
+          </td>
+            <td>
+              <span class="category-pill">
+                  {{ movimentacao.descricao }}
+                </span>
+            </td>
             <td><div class="bank-account"><strong>{{ movimentacao.banco }}</strong><span>{{ movimentacao.conta }}</span></div></td>
             <td class="amount-cell" [class.income-amount]="movimentacao.tipo === 'entrada'" [class.expense-amount]="movimentacao.tipo === 'saida'">{{ movimentacao.valor | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
             <td class="amount-cell balance-cell">

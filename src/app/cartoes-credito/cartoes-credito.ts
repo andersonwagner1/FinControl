@@ -111,6 +111,7 @@ export class ComponenteCartoesCredito implements OnInit, OnDestroy {
       .filter((lancamento) => lancamento.competenciaId === competenciaId)
       .map((lancamento): LinhaLancamentoCartao => ({
         ...lancamento,
+        id: lancamento.id,
         competencia: competenciaAtual,
         descricao: lancamento.dsObservacao || 'Compra no cartão',
         tipoMovimentacao: tipos.get(lancamento.tipoMovimentacaoId) ?? 'Despesa',

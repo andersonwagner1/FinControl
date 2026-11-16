@@ -163,6 +163,7 @@ export class ComponentePainel implements OnInit, OnDestroy {
         categoria: tipoMovimentacao?.dsCategoria ?? 'Outros',
         banco: bancoConta?.nomeBanco ?? '—',
         conta: bancoConta?.nomeConta ?? '—',
+        descricao: movimentacao.dsObservacao ?? '',
         valor: movimentacao.vlDebito==0 ? (movimentacao.vlCredito ?? 0) : -(movimentacao.vlDebito ?? 0),
         //valor: movimentacao.vlCredito ?? 0 > movimentacao.vlCredito : movimentacao.vlDebito, //Math.max(movimentacao.vlCredito ?? 0, movimentacao.vlDebito ?? 0),
         saldo: movimentacao.vlSaldo,

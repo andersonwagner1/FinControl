@@ -1,0 +1,57 @@
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">CADASTROS</p>
+    <h1>Competências</h1>
+    <p class="subtitle">Consulte e cadastre os meses disponíveis para um ano.</p>
+  </div>
+  <button class="primary-button" type="button" (click)="adicionar()" [disabled]="adicionando() || carregando()">
+    <span aria-hidden="true">＋</span>
+    {{ adicionando() ? 'Adicionando...' : 'Adicionar' }}
+  </button>
+</div>
+
+<section class="filters" aria-label="Filtro de competências">
+  <label class="filter-field">
+    <span>Ano</span>
+    <input type="number" min="1900" max="9999" step="1" [(ngModel)]="ano" />
+  </label>
+  <button class="secondary-button" type="button" (click)="filtrar()" [disabled]="carregando()">
+    <span aria-hidden="true">⌕</span>
+    {{ carregando() ? 'Filtrando...' : 'Filtrar' }}
+  </button>
+</section>
+
+@if (erro()) {
+  <div class="form-state-message form-state-error" role="alert">{{ erro() }}</div>
+}
+
+<section class="transactions">
+  <div class="section-heading">
+    <div>
+      <h2>Meses cadastrados</h2>
+      <p>Competências encontradas para {{ ano }}.</p>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>ID</th><th>MÊS</th><th>COMPETÊNCIA</th></tr>
+      </thead>
+      <tbody>
+        @if (carregando()) {
+          <tr><td class="empty-state" colspan="3">Consultando competências...</td></tr>
+        } @else {
+          @for (competencia of competencias(); track competencia.id) {
+            <tr>
+              <td>{{ competencia.id }}</td>
+              <td>{{ competencia.nrMes }}</td>
+              <td>{{ competencia.dsMesAno || (competencia.nrMes + '/' + competencia.nrAno) }}</td>
+            </tr>
+          } @empty {
+            <tr><td class="empty-state" colspan="3">Nenhum mês cadastrado para este ano.</td></tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
