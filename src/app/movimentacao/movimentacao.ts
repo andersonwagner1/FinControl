@@ -45,6 +45,7 @@ export class ComponentePainel implements OnInit, OnDestroy {
   private periodoCarregado?: string;
   private readonly modalNovoLancamento = viewChild.required<ElementRef<HTMLDialogElement>>('modalNovoLancamento');
   private readonly modalConfirmacaoExclusao = viewChild.required<ElementRef<HTMLDialogElement>>('modalConfirmacaoExclusao');
+  private readonly modalAjusteSaldo = viewChild.required<ElementRef<HTMLDialogElement>>('modalAjusteSaldo');
 
   protected readonly movimentacoesConsulta = signal<MovimentacaoConsulta[]>([]);
   protected readonly movimentacaoEditando = signal<MovimentacaoConsulta | null>(null);
@@ -68,6 +69,8 @@ export class ComponentePainel implements OnInit, OnDestroy {
   protected readonly erroSalvamentoNovoLancamento = signal<string | null>(null);
   protected readonly atualizandoSaldo = signal(false);
   protected readonly erroAtualizacaoSaldo = signal<string | null>(null);
+  protected readonly ajustandoSaldo = signal(false);
+  protected readonly erroAjusteSaldo = signal<string | null>(null);
   protected readonly excluindoMovimentacao = signal(false);
   protected readonly erroExclusaoMovimentacao = signal<string | null>(null);
   protected readonly destinosTransferencia = signal<BancoContaDisponivel[]>([]);
@@ -114,6 +117,7 @@ export class ComponentePainel implements OnInit, OnDestroy {
   });
   protected dataNovoLancamento = '';
   protected valorNovoLancamento: number | null = null;
+  protected saldoFinalInformado: number | null = null;
   protected observacaoNovoLancamento = '';
   protected readonly bancoContaSelecionada = computed(() => this.bancosContasDisponiveis().find((item) =>
     item.bancoId === this.bancoSelecionado() && item.contaId === this.contaSelecionada()) ?? null);
@@ -185,10 +189,13 @@ export class ComponentePainel implements OnInit, OnDestroy {
     this.requisicaoLancamento?.unsubscribe();
     this.requisicaoAtualizacao?.unsubscribe();
     this.requisicaoAtualizacaoSaldo?.unsubscribe();
+    this.requisicaoAjusteSaldo?.unsubscribe();
     this.requisicaoExclusao?.unsubscribe();
     this.requisicaoDestinosTransferencia?.unsubscribe();
     this.requisicaoInvestimentos?.unsubscribe();
   }
+
+  private requisicaoAjusteSaldo?: Subscription;
 
   protected alterarMes(mes: number): void {
     if (!Number.isInteger(mes) || mes < 1 || mes > 12) {
@@ -410,6 +417,44 @@ export class ComponentePainel implements OnInit, OnDestroy {
           console.error('Erro ao atualizar saldo:', erro);
           this.erroAtualizacaoSaldo.set(erro instanceof Error ? erro.message : 'Erro ao atualizar saldo.');
           this.atualizandoSaldo.set(false);
+        },
+      });
+  }
+
+  protected abrirModalAjusteSaldo(): void {
+    if (!this.bancoContaSelecionada() || this.carregandoBancosContas() || this.ajustandoSaldo()) {
+      return;
+    }
+    this.saldoFinalInformado = this.resumo()?.vlSaldoFinal ?? null;
+    this.erroAjusteSaldo.set(null);
+    this.modalAjusteSaldo().nativeElement.showModal();
+  }
+
+  protected fecharModalAjusteSaldo(): void {
+    if (this.ajustandoSaldo()) return;
+    this.modalAjusteSaldo().nativeElement.close();
+    this.erroAjusteSaldo.set(null);
+  }
+
+  protected salvarAjusteSaldo(): void {
+    const bancoContaId = this.bancoContaSelecionada()?.bancoContaId;
+    const saldoFinal = this.saldoFinalInformado;
+    if (bancoContaId === undefined || saldoFinal === null || !Number.isFinite(saldoFinal) || this.ajustandoSaldo()) return;
+    this.requisicaoAjusteSaldo?.unsubscribe();
+    this.erroAjusteSaldo.set(null);
+    this.ajustandoSaldo.set(true);
+    this.requisicaoAjusteSaldo = this.servicoMovimentacoesFinais.ajustarSaldoFinal(bancoContaId, this.mesSelecionado(), this.anoSelecionado(), saldoFinal)
+      .subscribe({
+        next: () => {
+          this.ajustandoSaldo.set(false);
+          this.modalAjusteSaldo().nativeElement.close();
+          this.consultarResumo();
+          this.consultarMovimentacoes();
+        },
+        error: (erro: unknown) => {
+          console.error('Erro ao ajustar saldo final:', erro);
+          this.erroAjusteSaldo.set(erro instanceof Error ? erro.message : 'Erro ao ajustar saldo final.');
+          this.ajustandoSaldo.set(false);
         },
       });
   }

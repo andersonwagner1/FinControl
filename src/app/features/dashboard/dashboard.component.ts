@@ -198,9 +198,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           .slice(0, 8);
       })
     );
-
+    console.log("estou atualizarPeriodoSankey");
     this.atualizarPeriodoSankey();
+    console.log("estou carregarFluxoMensal");
     this.carregarFluxoMensal();
+    console.log("estou carregarRelatorio");
     this.carregarRelatorio();
   }
 
@@ -210,10 +212,13 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.subs.add(this.dashboardService.getRelatorio(this.anoRelatorio).subscribe({
       next: relatorio => {
+
+        console.log(relatorio)
         this.relatorioMensal = relatorio;
         this.carregandoRelatorio = false;
       },
       error: () => {
+         console.log("erro");
         this.relatorioMensal = [];
         this.carregandoRelatorio = false;
         this.erroRelatorio = true;

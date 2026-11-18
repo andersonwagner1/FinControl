@@ -4,6 +4,13 @@ import { catchError, map, Observable, throwError } from 'rxjs';
 import { RetornoApi } from '../modelos/banco-conta-disponivel';
 import { MovimentacaoFinalMensal, ResumoMovimentacaoFinal } from '../modelos/resumo-movimentacao-final';
 
+interface SaldoFinalDto {
+  bancoContaId: number;
+  mes: number;
+  ano: number;
+  saldoFinal: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ServicoMovimentacoesFinais {
   private readonly http = inject(HttpClient);
@@ -50,6 +57,31 @@ export class ServicoMovimentacoesFinais {
       }),
       catchError((erro: unknown) => this.tratarErro(erro)),
     );
+  }
+
+  ajustarSaldoFinal(bancoContaId: number, mes: number, ano: number, saldoFinal: number): Observable<void> {
+    const dto: SaldoFinalDto = {
+      bancoContaId: Number(bancoContaId),
+      mes: Number(mes),
+      ano: Number(ano),
+      saldoFinal: Number(saldoFinal),
+    };
+    const parametros = new HttpParams()
+      .set('bancoContaId', dto.bancoContaId)
+      .set('mes', dto.mes)
+      .set('ano', dto.ano)
+      .set('saldoFinal', dto.saldoFinal);
+
+    return this.http
+      .post<RetornoApi<unknown>>(`${this.enderecoApi}/movimentacoes-finais/saldo-final`, dto, { params: parametros })
+      .pipe(
+        map((resposta) => {
+          if (!resposta.sucesso) {
+            throw new Error(resposta.mensagem || 'A API não confirmou o ajuste do saldo final.');
+          }
+        }),
+        catchError((erro: unknown) => this.tratarErro(erro)),
+      );
   }
 
   private ehRetornoApi(resposta: RetornoApi<unknown> | unknown): resposta is RetornoApi<unknown> {

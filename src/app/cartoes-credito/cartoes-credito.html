@@ -107,7 +107,6 @@
       </div>
 
       <div class="modal-form-grid">
-        @if (!lancamentoEditando()) {
         <label class="modal-field modal-full-width">
           <span>Tipo de movimentação <i>*</i></span>
           <select
@@ -123,7 +122,6 @@
             }
           </select>
         </label>
-        }
         <label class="modal-field">
           <span>Data da compra <i>*</i></span>
           <input type="date" name="dataMovimentacao" [(ngModel)]="dataMovimentacao" required />
@@ -155,7 +153,7 @@
         <span><i>*</i> Campos obrigatórios</span>
         <div>
           <button class="modal-cancel" type="button" (click)="fecharModalNovoLancamento()" [disabled]="salvandoLancamento()">Cancelar</button>
-          <button class="modal-save" type="submit" [disabled]="formularioLancamento.invalid || salvandoLancamento() || (!lancamentoEditando() && (!bancoContaSelecionadaId() || !competenciaSelecionada() || !tipoMovimentacaoSelecionadoId()))">
+          <button class="modal-save" type="submit" [disabled]="formularioLancamento.invalid || salvandoLancamento() || !tipoMovimentacaoSelecionadoId() || (!lancamentoEditando() && (!bancoContaSelecionadaId() || !competenciaSelecionada()))">
             @if (salvandoLancamento()) {
               Salvando...
             } @else {
@@ -175,7 +173,12 @@
   <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>DATA</th><th>DESCRIÇÃO</th><th>BANCO / CONTA</th><th>MÊS</th><th>ANO</th><th>PARCELAS</th><th class="amount-cell">VALOR</th><th>AÇÕES</th></tr>
+        <tr>
+          <th>DATA</th>
+          <th>DESCRIÇÃO</th>
+          <th>PARCELAS</th>
+          <th class="amount-cell">VALOR</th>
+          <th>AÇÕES</th></tr>
       </thead>
       <tbody>
         @if (carregandoLancamentos() || carregandoCompetencias()) {
@@ -195,12 +198,12 @@
               <td>
                 <div class="movement-name">
                   <span class="movement-indicator expense-indicator" aria-hidden="true">↑</span>
-                  <div class="movement-description"><strong>{{ lancamento.descricao }}</strong><span>{{lancamento.id }} - {{ lancamento.tipoMovimentacao }}</span></div>
+                  <div class="movement-description"><strong>{{ lancamento.descricao }}</strong>
+                    <span>{{lancamento.id }} - {{ lancamento.tipoMovimentacao }}</span>
+                  </div>
                 </div>
               </td>
-              <td><span class="category-pill">{{ lancamento.conta }}</span></td>
-              <td>{{ meses[lancamento.competencia.nrMes - 1] }}</td>
-              <td>{{ lancamento.competencia.nrAno }}</td>
+              
               <td>{{ lancamento.nrParcelas }}x</td>
               <td class="amount-cell expense-amount">{{ lancamento.vlCompra | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
               <td class="actions-cell">

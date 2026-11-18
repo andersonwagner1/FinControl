@@ -242,6 +242,39 @@
   </section>
 </dialog>
 
+<dialog #modalAjusteSaldo class="movement-dialog" aria-labelledby="ajuste-saldo-titulo" (click)="($event.target === $event.currentTarget) && fecharModalAjusteSaldo()">
+  <section class="movement-modal">
+    <header class="movement-modal-heading">
+      <div>
+        <p class="eyebrow">SALDO FINAL</p>
+        <h2 id="ajuste-saldo-titulo">Ajustar saldo</h2>
+        <p class="subtitle">Informe o valor final da conta para a competência selecionada.</p>
+      </div>
+      <button class="modal-close" type="button" aria-label="Fechar" (click)="fecharModalAjusteSaldo()">×</button>
+    </header>
+    <form (ngSubmit)="salvarAjusteSaldo()">
+      <div class="modal-account">
+        <div><span>Banco / conta</span><strong>{{ bancoContaSelecionada()?.nomeBanco }} — {{ bancoContaSelecionada()?.nomeConta }}</strong></div>
+        <div><span>Competência</span><strong>{{ meses[mesSelecionado() - 1] }} / {{ anoSelecionado() }}</strong></div>
+      </div>
+      <label class="modal-field">
+        <span>Valor final <i>*</i></span>
+        <div class="modal-amount-input"><span>R$</span><input type="number" name="saldoFinal" [(ngModel)]="saldoFinalInformado" required step="0.01" placeholder="0,00" [disabled]="ajustandoSaldo()" autofocus /></div>
+      </label>
+      @if (erroAjusteSaldo()) {
+        <p class="modal-save-error" role="alert">{{ erroAjusteSaldo() }}</p>
+      }
+      <footer class="modal-actions">
+        <span><i>*</i> Campo obrigatório</span>
+        <div>
+          <button class="modal-cancel" type="button" (click)="fecharModalAjusteSaldo()" [disabled]="ajustandoSaldo()">Cancelar</button>
+          <button class="modal-save" type="button" (click)="salvarAjusteSaldo()" [disabled]="saldoFinalInformado === null || ajustandoSaldo()">{{ ajustandoSaldo() ? 'Salvando...' : 'Ajustar saldo' }}</button>
+        </div>
+      </footer>
+    </form>
+  </section>
+</dialog>
+
 @if (carregandoResumo()) {
   <p class="form-state-message" role="status">Consultando saldos da conta selecionada...</p>
 } @else if (erroResumo()) {
@@ -275,16 +308,29 @@
 <section class="transactions">
   <div class="section-heading">
     <div><h2>Movimentação</h2><p>Suas movimentações para o período selecionado.</p></div>
+     <div class="section-actions">
+     <button class="modal-cancel" type="button" (click)="abrirModalAjusteSaldo()" [disabled]="!bancoContaSelecionada() || carregandoBancosContas() || ajustandoSaldo()">
+    <span aria-hidden="true">✎</span> Ajustar Saldo
+  </button>
      <button class="modal-cancel" type="button" (click)="atualizarSaldo()" [disabled]="!bancoContaSelecionada() || carregandoBancosContas() || atualizandoSaldo()">
     <span aria-hidden="true">＋</span> {{ atualizandoSaldo() ? 'Atualizando...' : 'Atualizar Saldo' }}
   </button>
+     </div>
   </div>
   @if (erroAtualizacaoSaldo()) {
     <p class="form-state-message form-state-error" role="alert">{{ erroAtualizacaoSaldo() }}</p>
   }
   <div class="table-wrap">
     <table>
-      <thead><tr><th>DATA</th><th>TIPO DE MOVIMENTAÇÃO</th><th>CATEGORIA</th><th>BANCO / CONTA</th><th class="amount-cell">VALOR</th><th class="amount-cell">SALDO</th><th>AÇÕES</th></tr></thead>
+      <thead>
+        <tr>
+          <th>DATA</th>
+          <th>TIPO DE MOVIMENTAÇÃO</th>
+          <th>Descrição</th>
+          <th>BANCO / CONTA</th>
+          <th class="amount-cell">VALOR</th>
+          <th class="amount-cell">SALDO</th>
+          <th>AÇÕES</th></tr></thead>
       <tbody>
         @if (carregandoMovimentacoes()) {
           <tr><td class="empty-state" colspan="7"><strong>Consultando movimentações...</strong></td></tr>
@@ -300,9 +346,7 @@
               </div>
           </td>
             <td>
-              <span class="category-pill">
-                  {{ movimentacao.descricao }}
-                </span>
+                {{ movimentacao.descricao }}
             </td>
             <td><div class="bank-account"><strong>{{ movimentacao.banco }}</strong><span>{{ movimentacao.conta }}</span></div></td>
             <td class="amount-cell" [class.income-amount]="movimentacao.tipo === 'entrada'" [class.expense-amount]="movimentacao.tipo === 'saida'">{{ movimentacao.valor | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>

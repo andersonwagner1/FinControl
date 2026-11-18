@@ -247,15 +247,16 @@ export class ComponenteCartoesCredito implements OnInit, OnDestroy {
     if (this.salvandoLancamento()
       || !dataMovimentacao || valorCompra === null
       || !Number.isFinite(valorCompra) || valorCompra <= 0
+      || !tipo
       || (lancamentoEditando === null && (
-        !competencia || bancoContaId === null || !tipo
+        !competencia || bancoContaId === null
         || !Number.isInteger(this.numeroParcelas) || this.numeroParcelas < 1
       ))) {
       return;
     }
 
     if (lancamentoEditando) {
-      this.atualizarLancamento(lancamentoEditando, dataMovimentacao, valorCompra);
+      this.atualizarLancamento(lancamentoEditando, dataMovimentacao, valorCompra, tipo.id);
       return;
     }
 
@@ -324,7 +325,7 @@ export class ComponenteCartoesCredito implements OnInit, OnDestroy {
     });
   }
 
-  private atualizarLancamento(original: LancamentoCartaoCredito, data: string, valor: number): void {
+  private atualizarLancamento(original: LancamentoCartaoCredito, data: string, valor: number, tipoMovimentacaoId: number): void {
     const observacao = this.observacao.trim();
     const sufixoParcela = /\s\[\d+\s\/\s\d+\]$/.exec(original.dsObservacao ?? '')?.[0] ?? '';
     const dados: AtualizacaoLancamentoCartaoCredito = {
@@ -332,6 +333,7 @@ export class ComponenteCartoesCredito implements OnInit, OnDestroy {
       nrDia: data.slice(8, 10),
       dtMovimentacao: `${data}T00:00:00.000Z`,
       vlCompra: valor,
+      tipoMovimentacaoId,
       dsObservacao: observacao ? `${observacao}${sufixoParcela}` : sufixoParcela || null,
     };
     this.erroSalvamento.set(null);
